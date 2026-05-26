@@ -7,4 +7,5 @@ idf_component_register(
 		"include"
 	REQUIRES
 		"TXLib"
+		"TXESP_Infrastructure"
 )

@@ -2,15 +2,85 @@
 
 #pragma once
 #include "tx/math.h"
+#include "tx/data.h"
+#include "tx/esp.h"
 #include <algorithm>
+
+
+/**
+ * The terminal engine is the very end of the TXESP infrastructure, combining
+ * keyboard input and screen / display output
+ */
+
+
+
+namespace tx::terminal {
+
+/**
+ * Architecture Design Pattern:
+ * Logics are separated into different classes, each are friend with whoever
+ * going to use it. It will contain a pointer to the object class that it
+ * belongs to, as it's parent, and modify data there.
+ * 
+ * The terminal engine is designed under the KISS rule:
+ * Keep it Simple, Stupid
+ */
+
+
+
+template <class T>
+struct Buffer {
+	Buffer(tx::u32 size)
+	    : buf(size, static_cast<T*>(heap_caps_malloc(
+	                    size, MALLOC_CAP_8BIT))) {}
+	~Buffer() {
+		heap_caps_free(buf.data());
+	}
+
+	tx::StaticGrowArr<T> buf;
+};
+
+
+
+
+/**
+ * @note
+ * this class will allocate memory:
+ * - string buffer - size of provided capacity
+ * - metadata buffer - size of provided max string count
+ */
+class StringPool {
+public:
+	StringPool(u32 capacity, u32 maxStringCount)
+	    : m_data(capacity) {}
+
+private:
+	// basically std::string_view
+	struct Range_impl {
+		u32 offset, size;
+	};
+
+private:
+	Buffer<char> m_data;
+};
+
+class TextBuffer {
+};
+
+/**
+ * Link StringPool and TextBuffer together, for the overflow of StringPool
+ * can take affect at TextBuffer
+ */
+class TextBufferManager {
+};
+
+
 
 /**
  * @note
  * this class will allocate memory:
  * - double text buffer (left and right buffer) of the max buffer size provided
  * 
- * This class is designed under the KISS rule:
- * Keep it Simple, Stupid
  */
 class InputLine {
 public:
@@ -20,26 +90,26 @@ public:
 	// user operations
 
 	void input(char val) {
-		m_data.left.push(val);
+		left_impl().push_back(val);
 	}
 	// backspace
 	void deleteFront() {
-		m_data.left.pop();
+		left_impl().pop_back();
 	}
 	// delete
 	void deleteBack() {
-		m_data.right.pop();
+		right_impl().pop_back();
 	}
 	void cursorMoveLeft(tx::u32 distance = 1) {
-		for (tx::u32 i = 0; i < distance && m_data.left.size(); i++) {
-			m_data.right.push(m_data.left.top());
-			m_data.left.pop();
+		for (tx::u32 i = 0; i < distance && left_impl().size(); i++) {
+			right_impl().push_back(left_impl().back());
+			left_impl().pop_back();
 		}
 	}
 	void cursorMoveRight(tx::u32 distance = 1) {
-		for (tx::u32 i = 0; i < distance && m_data.right.size(); i++) {
-			m_data.left.push(m_data.right.top());
-			m_data.right.pop();
+		for (tx::u32 i = 0; i < distance && right_impl().size(); i++) {
+			left_impl().push_back(right_impl().back());
+			right_impl().pop_back();
 		}
 	}
 
@@ -48,70 +118,43 @@ public:
 	// @return write successful
 	bool output(std::span<char> buffer) {
 		// size check
-		if (buffer.size() < m_data.left.size() + m_data.right.size()) return false;
-		std::reverse_copy(m_data.right.begin(), m_data.right.end(),
-		                  std::copy(m_data.left.begin(), m_data.left.end(), buffer.begin()));
+		if (buffer.size() < left_impl().size() + right_impl().size()) return false;
+		std::reverse_copy(right_impl().begin(), right_impl().end(),
+		                  std::copy(left_impl().begin(), left_impl().end(), buffer.begin()));
 		return true;
 	}
 
 	void clear() {
-		m_data.left.m_size = 0;
-		m_data.right.m_size = 0;
+		left_impl().clear();
+		right_impl().clear();
 	}
 
 
 private:
-	struct Buffer_impl {
-		Buffer_impl(tx::u32 in_size)
-		    : m_data(std::span<char>(
-		          static_cast<char*>(heap_caps_malloc(
-		              in_size, MALLOC_CAP_8BIT)),
-		          (size_t)in_size)),
-		      m_size(0), m_capacity(in_size) {}
-		~Buffer_impl() {
-			heap_caps_free(m_data.data());
-		}
-
-		using It_t = std::span<char>::iterator;
-		using ConstIt_t = std::span<char>::const_iterator;
-
-		std::span<char> m_data;
-		tx::u32 m_size,
-		    m_capacity;
-
-		void push(char val) {
-			m_data[m_size] = val;
-			m_size = std::min(m_size + 1, m_capacity - 1);
-		}
-		void pop() {
-			m_size = std::max(m_size, tx::u32{ 1 }) - 1;
-		}
-		char top() const {
-			return m_data[m_size - 1];
-		}
-		tx::u32 size() const {
-			return m_size;
-		}
-
-		It_t begin() { return m_data.begin(); }
-		ConstIt_t begin() const { return m_data.begin(); }
-		It_t end() { return m_data.begin() + m_size; }
-		ConstIt_t end() const { return m_data.begin() + m_size; }
-	};
-
 	struct Data_impl {
 		Data_impl(tx::u32 size)
 		    : left(size),
 		      right(size) {}
 
-		Buffer_impl left;
-		Buffer_impl right;
+		Buffer<char> left;
+		Buffer<char> right;
 	} m_data;
+
+	tx::StaticGrowArr<char>& left_impl() {
+		return m_data.left.buf;
+	}
+	tx::StaticGrowArr<char>& right_impl() {
+		return m_data.right.buf;
+	}
 };
 
 
 
-
+class InputHandler {
+public:
+private:
+private:
+};
 
 
 
@@ -153,7 +196,6 @@ public:
 
 	using InputCallback_t = std::function<void(std::string_view)>;
 
-
 public:
 	TerminalEngine(Font font) : m_rr(makeTextRenderer(font)) {}
 
@@ -182,3 +224,4 @@ private:
 
 	TextRenderer m_rr;
 };
+} // namespace tx::terminal

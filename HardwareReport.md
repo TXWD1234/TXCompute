@@ -2291,6 +2291,17 @@ This is one of the core infrastructure of the TerminalEngine.
 It manages the string literals entered by the user, and manage them in a way such that when encountered overflow, the old data will be deleted to make space for new data.
 This will be used to manage the input and output messages of the Terminal.
 
+# 2026-05-27
+
+## 2026-05-27 23:18:48:<br>Category: Development Report<br>Topic: `LineBuffer`
+`LineBuffer` is the buffer that contains the actual terminal lines.
+Each entry of it is not a string, but a struct, consist of:
+- index
+- type
+It could either be an entry in the `StringPool`, or a user defined message preset.
+`StringPool`'s eviction will take affect on it, meanwhile itself will also evict when the lines reaches the maximum.
+*So plus the internal 2 consideration of eviction in `StringPool`, this one is a 3 way invoker.*
+
 
 Todo:
 add set pin in FrameComposer

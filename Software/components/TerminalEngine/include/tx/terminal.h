@@ -45,7 +45,6 @@ struct Buffer {
 
 
 
-
 /**
  * @note
  * this class will allocate memory:
@@ -68,16 +67,18 @@ class StringPool {
 public:
 	StringPool(u32 characterCapacity, u32 maxStringCount)
 	    : m_data(characterCapacity), m_meta(maxStringCount) {
-		m_data->resize(m_data->capacity());
+		m_data->resize_no_zero_init(m_data->capacity());
 	}
 
 	u32 add(std::string_view str) {
+		// DevNote: add assert for string too big
 		u32 index = addObject_impl(str.size());
 		std::copy(str.begin(), str.end(), m_data->begin() + m_meta.buf[index].offset);
 		return index;
 	}
 
 	std::string_view get(u32 index) const {
+		// DevNote: add assert for index out of bound
 		Range_impl meta = m_meta.buf[index];
 		return std::string_view(
 		    m_data->begin() + meta.offset,
@@ -117,14 +118,6 @@ public:
 	void setDeleteCallback(Func&& cb) {
 		m_deleteCb = ObjectDeleteCallback_t(std::forward<Func>(cb));
 		m_deleteCbSetted = true;
-	}
-
-	// delete a meta object
-	void deleteObject_impl(u32 index) {
-		// this function don't actually run any deletion logic, because there
-		// is no destructor to call - everything is POD
-		if (m_deleteCbSetted)
-			m_deleteCb(index);
 	}
 
 private:
@@ -168,6 +161,10 @@ private:
 	 * [new data | deleted extras | old data | uninitialized]
 	 *  ^        ^                ^          ^              ^
 	 *  0     frontEnd      backBegin   m_meta.size()  m_meta.capacity()
+	 * 
+	 * When frontEnd == 0 and backBegin == 0, it indicates that the buffer is
+	 * linear, meaning that there was no eviction happend, or all previous
+	 * generation data are all evicted - the eviction is resolved
 	 */
 	struct MetaState_impl {
 		u32 frontEnd = 0, backBegin = 0;
@@ -180,19 +177,50 @@ private:
 	//         represents the free space for the new data to occupy in
 	u32 addObject_impl(u32 size) {
 		if (size > m_data->capacity()) {
-			// DevNote: error
+			// DevNote: error - single string overflows the entire buffer
 			return InvalidU32;
 		}
+		/**
+		 * Edge case: when everything is empty
+		 */
+		if (m_meta->empty()) {
+			m_meta->push_back(Range_impl{ 0, size });
+			m_metastate.frontEnd = 0;
+			m_metastate.backBegin = 0;
+			return 0;
+		}
+
 		u32 index;
 		Range_impl object = makeMemoryVacancy_impl(size, index);
 		if (index == InvalidU32) { // require makeMetaVacancy_impl
-			index = makeMetaVacancy_impl();
+			bool bufferLayoutChanged = false;
+			index = makeMetaVacancy_impl(bufferLayoutChanged);
+			if (bufferLayoutChanged) {
+				// now memory place need to be determind again, since memory
+				// layout of m_meta have to match m_data
+
+				// clearing meta object data after deletion for meta integrity
+				// preventing the curruption of frontEndIndex calculation in
+				// the second makeMemoryVacancy_impl call.
+				m_meta.buf[index] = {};
+
+				u32 temp; // we don't care about it's potential index
+				// because the index is already determinded
+				object = makeMemoryVacancy_impl(size, temp);
+			}
 		}
 		m_meta.buf[index] = object;
 		return index;
 	}
 
 
+	// delete a meta object - handles all the memory wise delete operations
+	void deleteObject_impl(u32 index) {
+		// this function don't actually run any deletion logic, because there
+		// is no destructor to call - everything is POD
+		if (m_deleteCbSetted)
+			m_deleteCb(index);
+	}
 
 	// eviction
 	/**
@@ -245,15 +273,19 @@ private:
 			return Range_impl{ InvalidU32, InvalidU32 };
 		}
 
-		// resolve backBegin == end - become linear
+		// resolve backBegin == end: all previous object deleted; become linear
 		if (m_metastate.backBegin >= m_meta->size()) {
+			// remove any potential garbage object in interspace
+			if (m_metastate.frontEnd != m_metastate.backBegin)
+				m_meta->erase(m_meta->begin() + m_metastate.frontEnd, m_meta->end());
+
 			m_metastate.frontEnd = 0;
 			m_metastate.backBegin = 0;
 		}
 
 		// case 1
 		if (m_metastate.frontEnd == 0) {
-			u32 currentBufferSize = m_meta->back().end();
+			u32 currentBufferSize = m_meta->empty() ? 0 : m_meta->back().end();
 			if (size > m_data->capacity() - currentBufferSize) {
 				// requested size overflows remaining capacity - evict
 				index = 0;
@@ -263,36 +295,39 @@ private:
 			return Range_impl{ currentBufferSize, size };
 		}
 
+		u32 frontEndIndex = m_meta.buf[m_metastate.frontEnd - 1].end();
 		u32 freeCapacity = m_meta.buf[m_metastate.backBegin].offset -
-		                   m_meta.buf[m_metastate.frontEnd].end();
+		                   frontEndIndex;
 		// case 2
-		if (size < freeCapacity) {
+		if (size <= freeCapacity) {
 			// nothing to do
 			index = InvalidU32;
 			return Range_impl{
-				m_meta.buf[m_metastate.frontEnd].end(), size
+				frontEndIndex, size
 			};
 		}
 
 		// case 3
-		if (size <= m_data->capacity() - m_meta.buf[m_metastate.frontEnd].end()) {
+		if (size <= m_data->capacity() - frontEndIndex) {
 			u32 furtherRequiredSize = size - freeCapacity;
 			m_metastate.backBegin = makeMemoryVacancyEvict_impl(
 			    furtherRequiredSize, m_metastate.backBegin);
 			index = InvalidU32;
 			return Range_impl{
-				m_meta.buf[m_metastate.frontEnd].end(), size
+				frontEndIndex, size
 			};
 		}
 
 		// case 4
+		index = InvalidU32;
 		return makeMemoryVacancyBegin_impl(size);
 	}
 	// this is not a function to solve a case; it's a generic helper
 	// After this function returns, there is possibility of the size is not
 	// satisfied, but instead had reached the end of m_meta. Depndending on the
 	// context, this should be accounted
-	// @return the new backBegin / the index of the last deleted
+	// @return the new backBegin / the index of the next object of the last
+	//         object deleted
 	// @param size the size that is requested
 	// @param first the first object to be evicted
 	u32 makeMemoryVacancyEvict_impl(u32 size, u32 first) {
@@ -301,31 +336,50 @@ private:
 		for (; i < m_meta->size(); i++) {
 			deleteObject_impl(i);
 			currentSize += m_meta.buf[i].size;
-			if (currentSize >= size) break;
+			if (currentSize >= size) {
+				i++;
+				break;
+			}
 		}
-		return i + 1;
+		return i;
 	}
 	// find a free space from the beginning
 	Range_impl makeMemoryVacancyBegin_impl(u32 size) {
-		m_metastate.frontEnd = 1;
 		m_metastate.backBegin = makeMemoryVacancyEvict_impl(size, 0);
 		if (m_metastate.backBegin >= m_meta->size()) {
 			// absolute everything got deleted
 			m_metastate.frontEnd = 0;
 			m_metastate.backBegin = 0;
+			m_meta->clear();
+			m_meta->push_back({});
+		} else {
+			m_metastate.frontEnd = 1; // there is one object at the very start
 		}
 
 		return Range_impl{ 0, size };
 	}
 
+	/**
+	 * After makeMetaVacancy_impl returns there are 3 possibilities for the
+	 * value of it's return value: index of the meta object
+	 * 1. Linear, normal push, index = m_meta->size() - 1;
+	 * 2. Evicted, normal push, index = old m_metastate.frontEnd
+	 * 3. Linear, push but overflows capacity -> evict invoked, index = 0
+	 * Notice that in case 3 the memory place need to change, and
+	 * makeMemoryVacancy_impl need to be called one more time, since memory
+	 * layout of m_meta have to match m_data
+	 */
 
 	// context: a new object is inserting
 	// call occasion: after memory eviction resolution is over
 	// design: lazy, meaning that things don't check the state after they are
 	//         done - the next operation checks it.
-	// this is basically just the entry point of meta eviction resolution
+	// the entry point of meta eviction resolution
+	// @param bufferLayoutChanged set to true when buffer order had changed by
+	//                            reorder of m_meta; will be used to invoke the
+	//                            second makeMemoryVacancy_impl call
 	// @return index in m_meta of the object in vacancy
-	u32 makeMetaVacancy_impl() {
+	u32 makeMetaVacancy_impl(bool& bufferLayoutChanged) {
 		/**
 		 * There are 4 cases (excluding error cases) to this function:
 		 * case 1: Linear     - eviction never happend / is fully resolved,
@@ -341,23 +395,35 @@ private:
 		 *                      is no more empty slots - meta eviction invokes
 		 */
 
+		bufferLayoutChanged = false;
+
 		// error case: frontEnd > backBegin
 		if (m_metastate.frontEnd > m_metastate.backBegin) {
 			// DevNote: error
 			return InvalidU32;
 		}
 
+		// resolve backBegin == end: all previous object deleted; become linear
+		if (m_metastate.backBegin >= m_meta->size()) {
+			// remove any potential garbage object in interspace
+			m_meta->erase(m_meta->begin() + m_metastate.frontEnd, m_meta->end());
+
+			m_metastate.frontEnd = 0;
+			m_metastate.backBegin = 0;
+		}
+
 		// case 1
 		if (m_metastate.frontEnd == 0) {
-			return makeMetaVacancyLinear_impl();
+			return makeMetaVacancyLinear_impl(bufferLayoutChanged);
 		}
 
 		// case 2
-		if (m_metastate.frontEnd == m_meta->size()) {
-			m_metastate.frontEnd = 0;
-			m_metastate.backBegin = 0;
-			return makeMetaVacancyLinear_impl();
-		}
+		// unreachable because resolve backBegin == end above already solved it
+		// if (m_metastate.frontEnd >= m_meta->size()) {
+		// 	m_metastate.frontEnd = 0;
+		// 	m_metastate.backBegin = 0;
+		// 	return makeMetaVacancyLinear_impl();
+		// }
 
 		// case 3
 		if (m_metastate.frontEnd < m_metastate.backBegin) {
@@ -373,37 +439,41 @@ private:
 		return InvalidU32;
 	}
 	u32 makeMetaVacancyAdjacent_impl() {
-		deleteObject_impl(getMetaTail_impl());
+		// DevNote: assertion
+		// assert(m_metastate.backBegin < m_meta->size());
+		deleteObject_impl(m_metastate.backBegin);
 		m_metastate.backBegin++;
 		m_metastate.frontEnd++;
 		return m_metastate.frontEnd - 1;
 	}
-	u32 makeMetaVacancyLinear_impl() {
+	u32 makeMetaVacancyLinear_impl(bool& bufferLayoutChanged) {
 		if (m_meta->size() == m_meta->capacity()) {
 			// meta overflow - meta eviction invokes; then switch to adjacent
-			// - directly used adjacent here because adjacent already included
+			// - directly use adjacent here because adjacent already included
 			//   eviction.
+			bufferLayoutChanged = true; // declare buffer layout change, since
+			// m_meta wrapping back to start means that memory place need to be
+			// re-determinded from the start as well
+			// only set here but not makeMetaVacancyAdjacent_impl because in
+			// the general makeMetaVacancyAdjacent_impl case the memory layout
+			// is not garanteed to change
 			return makeMetaVacancyAdjacent_impl();
 		}
 		m_meta->push_back({});
 		return m_meta->size() - 1;
 	}
-
-	u32 getMetaTail_impl() {
-		return m_metastate.backBegin != 0 ?
-		           m_metastate.backBegin :
-		           0;
-	}
 };
 
-class TextBuffer {
+class LineBuffer {
+public:
+private:
 };
 
 /**
  * Link StringPool and TextBuffer together, for the overflow of StringPool
  * can take affect at TextBuffer
  */
-class TextBufferManager {
+class LineBufferManager {
 };
 
 
@@ -482,9 +552,26 @@ private:
 
 
 
+
+
+
+
 class InputHandler {
 public:
 private:
+	// clang-format off
+	inline static constexpr const i8 keyShiftTable[] = {
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		'"', // ''' Apostrophe
+
+
+		
+	};
+	// clang-format on
+
 private:
 };
 

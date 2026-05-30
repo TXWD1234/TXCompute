@@ -21,27 +21,13 @@ namespace tx::terminal {
  * Logics are separated into different classes, each are friend with whoever
  * going to use it. It will contain a pointer to the object class that it
  * belongs to, as it's parent, and modify data there.
- * 
+ *
  * The terminal engine is designed under the KISS rule:
  * Keep it Simple, Stupid
  */
 
 
 
-template <class T>
-struct Buffer {
-	Buffer(tx::u32 size)
-	    : buf(size, static_cast<T*>(heap_caps_malloc(
-	                    size, MALLOC_CAP_8BIT))) {}
-	~Buffer() {
-		heap_caps_free(buf.data());
-	}
-
-	tx::StaticGrowArr<T>* operator->() { return &buf; }
-	const tx::StaticGrowArr<T>* operator->() const { return &buf; }
-
-	tx::StaticGrowArr<T> buf;
-};
 
 
 
@@ -50,7 +36,7 @@ struct Buffer {
  * this class will allocate memory:
  * - string buffer - size of provided capacity
  * - metadata buffer - size of provided max string count
- * 
+ *
  * manages the shrink logic when buffer is full (eviction)
  */
 class StringPool {
@@ -62,30 +48,30 @@ class StringPool {
 	 * - Object / Meta / Range:
 	 *   These terms refers to an entry in m_meta, which is corresponding to a
 	 *   range of data in m_data. Conceptually simillar to a partition
-	 * 
+	 *
 	 */
 public:
 	StringPool(u32 characterCapacity, u32 maxStringCount)
 	    : m_data(characterCapacity), m_meta(maxStringCount) {
-		m_data->resize_no_zero_init(m_data->capacity());
+		m_data.resize_no_zero_init(m_data.capacity());
 	}
 
 	u32 add(std::string_view str) {
 		// DevNote: add assert for string too big
 		u32 index = addObject_impl(str.size());
-		std::copy(str.begin(), str.end(), m_data->begin() + m_meta.buf[index].offset);
+		std::copy(str.begin(), str.end(), m_data.begin() + m_meta[index].offset);
 		return index;
 	}
 
 	std::string_view get(u32 index) const {
 		// DevNote: add assert for index out of bound
-		Range_impl meta = m_meta.buf[index];
+		Range_impl meta = m_meta[index];
 		return std::string_view(
-		    m_data->begin() + meta.offset,
-		    m_data->begin() + meta.offset + meta.size);
+		    m_data.begin() + meta.offset,
+		    m_data.begin() + meta.offset + meta.size);
 	}
 
-	u32 getSize(u32 index) const { return m_meta.buf[index].size; }
+	u32 getSize(u32 index) const { return m_meta[index].size; }
 
 
 
@@ -121,8 +107,8 @@ public:
 	}
 
 private:
-	Buffer<char> m_data;
-	Buffer<Range_impl> m_meta;
+	esp::Buffer_GrowArray<char> m_data;
+	esp::Buffer_GrowArray<Range_impl> m_meta;
 	/**
 	 * The m_meta describes the objects / ranges that is stored in m_data
 	 * The order of meta objects in m_meta must reflect the actual data order
@@ -134,16 +120,16 @@ private:
 	/**
 	 * The eviction will delete objects from the begin of buffer, and insert
 	 * new data at the empty space cleared out
-	 * 
+	 *
 	 * The MetaState_impl marks the availability of buffer m_meta.
 	 * And the memory availability can be calculated by the metadata stored in
 	 * m_meta.
-	 * 
-	 *  
-	 * 
+	 *
+	 *
+	 *
 	 * Memory Layout for m_meta: (worse case)
 	 * [-- occupied --][-- empty --][-- occupied --][-- empty --]
-	 * 
+	 *
 	 * - The first part is the new data that replaced the old, evicted data. it
 	 *   always start at begin of buffer, and its end is marked by `frontEnd`,
 	 *   which stands for "end of front"
@@ -157,11 +143,11 @@ private:
 	 * - The fourth part is the uninitialized memory of the buffer, which is
 	 *   expected to be small, since because of it cannot fit the incoming
 	 *   string, eviction was invoked, created part 1 and 2.
-	 * 
+	 *
 	 * [new data | deleted extras | old data | uninitialized]
 	 *  ^        ^                ^          ^              ^
 	 *  0     frontEnd      backBegin   m_meta.size()  m_meta.capacity()
-	 * 
+	 *
 	 * When frontEnd == 0 and backBegin == 0, it indicates that the buffer is
 	 * linear, meaning that there was no eviction happend, or all previous
 	 * generation data are all evicted - the eviction is resolved
@@ -176,15 +162,15 @@ private:
 	// @return the index of the meta object in m_meta. That meta object
 	//         represents the free space for the new data to occupy in
 	u32 addObject_impl(u32 size) {
-		if (size > m_data->capacity()) {
+		if (size > m_data.capacity()) {
 			// DevNote: error - single string overflows the entire buffer
 			return InvalidU32;
 		}
 		/**
 		 * Edge case: when everything is empty
 		 */
-		if (m_meta->empty()) {
-			m_meta->push_back(Range_impl{ 0, size });
+		if (m_meta.empty()) {
+			m_meta.push_back(Range_impl{ 0, size });
 			m_metastate.frontEnd = 0;
 			m_metastate.backBegin = 0;
 			return 0;
@@ -202,14 +188,14 @@ private:
 				// clearing meta object data after deletion for meta integrity
 				// preventing the curruption of frontEndIndex calculation in
 				// the second makeMemoryVacancy_impl call.
-				m_meta.buf[index] = {};
+				m_meta[index] = {};
 
 				u32 temp; // we don't care about it's potential index
 				// because the index is already determinded
 				object = makeMemoryVacancy_impl(size, temp);
 			}
 		}
-		m_meta.buf[index] = object;
+		m_meta[index] = object;
 		return index;
 	}
 
@@ -228,7 +214,7 @@ private:
 	 * (only matters in implementation)
 	 * - memory overflow: when incoming string size overflows memory capacity
 	 * - meta overflow: when metadata buffer is full
-	 * 
+	 *
 	 * Memory eviction is always resolved first, since as if a deletion of
 	 * string object is made by memory eviction, the meta overflows always
 	 * resolves itself.
@@ -274,10 +260,10 @@ private:
 		}
 
 		// resolve backBegin == end: all previous object deleted; become linear
-		if (m_metastate.backBegin >= m_meta->size()) {
+		if (m_metastate.backBegin >= m_meta.size()) {
 			// remove any potential garbage object in interspace
 			if (m_metastate.frontEnd != m_metastate.backBegin)
-				m_meta->erase(m_meta->begin() + m_metastate.frontEnd, m_meta->end());
+				m_meta.erase(m_meta.begin() + m_metastate.frontEnd, m_meta.end());
 
 			m_metastate.frontEnd = 0;
 			m_metastate.backBegin = 0;
@@ -285,8 +271,8 @@ private:
 
 		// case 1
 		if (m_metastate.frontEnd == 0) {
-			u32 currentBufferSize = m_meta->empty() ? 0 : m_meta->back().end();
-			if (size > m_data->capacity() - currentBufferSize) {
+			u32 currentBufferSize = m_meta.empty() ? 0 : m_meta.back().end();
+			if (size > m_data.capacity() - currentBufferSize) {
 				// requested size overflows remaining capacity - evict
 				index = 0;
 				return makeMemoryVacancyBegin_impl(size);
@@ -295,8 +281,8 @@ private:
 			return Range_impl{ currentBufferSize, size };
 		}
 
-		u32 frontEndIndex = m_meta.buf[m_metastate.frontEnd - 1].end();
-		u32 freeCapacity = m_meta.buf[m_metastate.backBegin].offset -
+		u32 frontEndIndex = m_meta[m_metastate.frontEnd - 1].end();
+		u32 freeCapacity = m_meta[m_metastate.backBegin].offset -
 		                   frontEndIndex;
 		// case 2
 		if (size <= freeCapacity) {
@@ -308,7 +294,7 @@ private:
 		}
 
 		// case 3
-		if (size <= m_data->capacity() - frontEndIndex) {
+		if (size <= m_data.capacity() - frontEndIndex) {
 			u32 furtherRequiredSize = size - freeCapacity;
 			m_metastate.backBegin = makeMemoryVacancyEvict_impl(
 			    furtherRequiredSize, m_metastate.backBegin);
@@ -333,9 +319,9 @@ private:
 	u32 makeMemoryVacancyEvict_impl(u32 size, u32 first) {
 		u32 currentSize = 0;
 		u32 i = first;
-		for (; i < m_meta->size(); i++) {
+		for (; i < m_meta.size(); i++) {
 			deleteObject_impl(i);
-			currentSize += m_meta.buf[i].size;
+			currentSize += m_meta[i].size;
 			if (currentSize >= size) {
 				i++;
 				break;
@@ -346,12 +332,12 @@ private:
 	// find a free space from the beginning
 	Range_impl makeMemoryVacancyBegin_impl(u32 size) {
 		m_metastate.backBegin = makeMemoryVacancyEvict_impl(size, 0);
-		if (m_metastate.backBegin >= m_meta->size()) {
+		if (m_metastate.backBegin >= m_meta.size()) {
 			// absolute everything got deleted
 			m_metastate.frontEnd = 0;
 			m_metastate.backBegin = 0;
-			m_meta->clear();
-			m_meta->push_back({});
+			m_meta.clear();
+			m_meta.push_back({});
 		} else {
 			m_metastate.frontEnd = 1; // there is one object at the very start
 		}
@@ -362,9 +348,9 @@ private:
 	/**
 	 * After makeMetaVacancy_impl returns there are 3 possibilities for the
 	 * value of it's return value: index of the meta object
-	 * 1. Linear, normal push, index = m_meta->size() - 1;
+	 * 1. Linear, normal push, index = m_meta.size() - 1;
 	 * 2. Evicted, normal push, index = old m_metastate.frontEnd
-	 * 3. Linear, push but overflows capacity -> evict invoked, index = 0
+	 * 3. Linear, push but overflows capacity . evict invoked, index = 0
 	 * Notice that in case 3 the memory place need to change, and
 	 * makeMemoryVacancy_impl need to be called one more time, since memory
 	 * layout of m_meta have to match m_data
@@ -404,9 +390,9 @@ private:
 		}
 
 		// resolve backBegin == end: all previous object deleted; become linear
-		if (m_metastate.backBegin >= m_meta->size()) {
+		if (m_metastate.backBegin >= m_meta.size()) {
 			// remove any potential garbage object in interspace
-			m_meta->erase(m_meta->begin() + m_metastate.frontEnd, m_meta->end());
+			m_meta.erase(m_meta.begin() + m_metastate.frontEnd, m_meta.end());
 
 			m_metastate.frontEnd = 0;
 			m_metastate.backBegin = 0;
@@ -419,7 +405,7 @@ private:
 
 		// case 2
 		// unreachable because resolve backBegin == end above already solved it
-		// if (m_metastate.frontEnd >= m_meta->size()) {
+		// if (m_metastate.frontEnd >= m_meta.size()) {
 		// 	m_metastate.frontEnd = 0;
 		// 	m_metastate.backBegin = 0;
 		// 	return makeMetaVacancyLinear_impl();
@@ -440,14 +426,14 @@ private:
 	}
 	u32 makeMetaVacancyAdjacent_impl() {
 		// DevNote: assertion
-		// assert(m_metastate.backBegin < m_meta->size());
+		// assert(m_metastate.backBegin < m_meta.size());
 		deleteObject_impl(m_metastate.backBegin);
 		m_metastate.backBegin++;
 		m_metastate.frontEnd++;
 		return m_metastate.frontEnd - 1;
 	}
 	u32 makeMetaVacancyLinear_impl(bool& bufferLayoutChanged) {
-		if (m_meta->size() == m_meta->capacity()) {
+		if (m_meta.size() == m_meta.capacity()) {
 			// meta overflow - meta eviction invokes; then switch to adjacent
 			// - directly use adjacent here because adjacent already included
 			//   eviction.
@@ -459,8 +445,8 @@ private:
 			// is not garanteed to change
 			return makeMetaVacancyAdjacent_impl();
 		}
-		m_meta->push_back({});
-		return m_meta->size() - 1;
+		m_meta.push_back({});
+		return m_meta.size() - 1;
 	}
 };
 
@@ -482,7 +468,7 @@ class LineBufferManager {
  * @note
  * this class will allocate memory:
  * - double text buffer (left and right buffer) of the max buffer size provided
- * 
+ *
  */
 class InputLine {
 public:
@@ -492,26 +478,26 @@ public:
 	// user operations
 
 	void input(char val) {
-		left_impl().push_back(val);
+		m_data.left.push_back(val);
 	}
 	// backspace
 	void deleteFront() {
-		left_impl().pop_back();
+		m_data.left.pop_back();
 	}
 	// delete
 	void deleteBack() {
-		right_impl().pop_back();
+		m_data.right.pop_back();
 	}
 	void cursorMoveLeft(tx::u32 distance = 1) {
-		for (tx::u32 i = 0; i < distance && left_impl().size(); i++) {
-			right_impl().push_back(left_impl().back());
-			left_impl().pop_back();
+		for (tx::u32 i = 0; i < distance && m_data.left.size(); i++) {
+			m_data.right.push_back(m_data.left.back());
+			m_data.left.pop_back();
 		}
 	}
 	void cursorMoveRight(tx::u32 distance = 1) {
-		for (tx::u32 i = 0; i < distance && right_impl().size(); i++) {
-			left_impl().push_back(right_impl().back());
-			right_impl().pop_back();
+		for (tx::u32 i = 0; i < distance && m_data.right.size(); i++) {
+			m_data.left.push_back(m_data.right.back());
+			m_data.right.pop_back();
 		}
 	}
 
@@ -520,44 +506,57 @@ public:
 	// @return write successful
 	bool output(std::span<char> buffer) {
 		// size check
-		if (buffer.size() < left_impl().size() + right_impl().size()) return false;
-		std::reverse_copy(right_impl().begin(), right_impl().end(),
-		                  std::copy(left_impl().begin(), left_impl().end(), buffer.begin()));
+		if (buffer.size() < m_data.left.size() + m_data.right.size()) return false;
+		std::reverse_copy(m_data.right.begin(), m_data.right.end(),
+		                  std::copy(m_data.left.begin(), m_data.left.end(), buffer.begin()));
 		return true;
 	}
 
 	void clear() {
-		left_impl().clear();
-		right_impl().clear();
+		m_data.left.clear();
+		m_data.left.clear();
 	}
 
 
 private:
 	struct Data_impl {
 		Data_impl(tx::u32 size)
-		    : left(size),
-		      right(size) {}
+		    : leftBuffer(size),
+		      rightBuffer(size),
+		      left(leftBuffer.span()),
+		      right(rightBuffer.span()) {}
 
-		Buffer<char> left;
-		Buffer<char> right;
+		esp::Buffer<char> leftBuffer;
+		esp::Buffer<char> rightBuffer;
+		tx::GrowArrayOverlay<char> left;
+		tx::GrowArrayOverlay<char> right;
 	} m_data;
-
-	tx::StaticGrowArr<char>& left_impl() {
-		return m_data.left.buf;
-	}
-	tx::StaticGrowArr<char>& right_impl() {
-		return m_data.right.buf;
-	}
 };
 
 
 
+struct InputEvent {
+	esp::USBKeyboardInputHandler::Key key;
+	esp::USBKeyboardInputHandler::Mod mod;
+	esp::USBKeyboardInputHandler::Action action;
+};
 
-
-
-
+/**
+ * Flatten the call back based input into a buffer
+ *
+ * This class will be pushing input struct to a circular queue, which is set by
+ * the higher level end of this class.
+ * This class is a static class, as required by the callback of
+ * esp::USBKeyboardInputHandler
+ */
 class InputHandler {
 public:
+	void init() { esp::USBKeyboardInputHandler::init(); }
+	void uninit() { esp::USBKeyboardInputHandler::uninit(); }
+	void setBuffer(CircularQueueOverlay<InputEvent> buffer) {
+		m_buffer = buffer;
+	}
+
 private:
 	// clang-format off
 	inline static constexpr const i8 keyShiftTable[] = {
@@ -565,14 +564,66 @@ private:
 		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
 		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
 		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
-		'"', // ''' Apostrophe
-
-
-		
+		'"', /* ' */
+		i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		'<', /* , */
+		'_', /* - */
+		'>', /* . */
+		'?', /* / */
+		'!', /* 0 */
+		'@', /* 1 */
+		'#', /* 2 */
+		'$', /* 3 */
+		'%', /* 4 */
+		'^', /* 5 */
+		'&', /* 6 */
+		'*', /* 7 */
+		'(', /* 8 */
+		')', /* 9 */
+		i8{-1},
+		':', /* ; */
+		i8{-1},
+		'+', /* = */
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1}, i8{-1},
+		i8{-1}, i8{-1}, i8{-1},
+		'{', /* [ */
+		'|', /* \ */
+		'}', /* ] */
+		i8{-1}, i8{-1},
+		'~', /* ` */
+		'A', /* a */
+		'B', /* b */
+		'C', /* c */
+		'D', /* d */
+		'E', /* e */
+		'F', /* f */
+		'G', /* g */
+		'H', /* h */
+		'I', /* i */
+		'J', /* j */
+		'K', /* k */
+		'L', /* l */
+		'M', /* m */
+		'N', /* n */
+		'O', /* o */
+		'P', /* p */
+		'Q', /* q */
+		'R', /* r */
+		'S', /* s */
+		'T', /* t */
+		'U', /* u */
+		'V', /* v */
+		'W', /* w */
+		'X', /* x */
+		'Y', /* y */
+		'Z', /* z */
 	};
 	// clang-format on
 
 private:
+	CircularQueueOverlay<InputEvent> m_buffer;
 };
 
 
@@ -585,12 +636,12 @@ private:
 
 
 struct Font {
-	tx::u32 width;
-	tx::u32 height;
-	std::span<tx::u8> bitmapData;
+	u32 width;
+	u32 height;
+	std::span<u8> bitmapData;
 };
-inline TextRenderer makeTextRenderer(Font font) {
-	return TextRenderer{
+inline esp::TextRenderer makeTextRenderer(Font font) {
+	return esp::TextRenderer{
 		font.width,
 		font.height,
 		font.bitmapData
@@ -603,7 +654,7 @@ inline TextRenderer makeTextRenderer(Font font) {
  * @note
  * this class will allocate memory:
  * - TextRenderer: double render buffer, each `width * height * 2` (u16)
- * - String buffer: 
+ * - String buffer:
  */
 class TerminalEngine {
 	/**
@@ -641,6 +692,6 @@ private:
 private:
 	// runtime data
 
-	TextRenderer m_rr;
+	esp::TextRenderer m_rr;
 };
 } // namespace tx::terminal

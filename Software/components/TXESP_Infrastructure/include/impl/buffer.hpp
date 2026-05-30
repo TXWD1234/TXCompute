@@ -3,6 +3,7 @@
 #pragma once
 #include "esp_heap_caps.h"
 #include "impl/grow_array.hpp"
+#include "impl/circular_queue.hpp"
 #include <span>
 
 namespace tx::esp {

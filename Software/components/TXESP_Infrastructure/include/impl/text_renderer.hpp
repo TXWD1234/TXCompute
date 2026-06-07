@@ -2,6 +2,7 @@
 
 #pragma once
 #include "impl/frame_composer.hpp"
+#include "tx/rgb.hpp"
 
 namespace tx::esp {
 
@@ -36,9 +37,32 @@ public:
 		m_currentFrameBufferIndex = !m_currentFrameBufferIndex;
 	}
 
+	void setColor(RGB empty, RGB solid) {
+		color[0] = compressRGB_impl(empty);
+		color[1] = compressRGB_impl(solid);
+	}
+
+	void drawPlain(Coord position, RGB color) {
+		drawPlain(position, compressRGB_impl(color));
+	}
+	void drawPlain(Coord position, u16 color) {
+		std::span<u16> frameBuffer = m_data.frameBuffer[m_currentFrameBufferIndex];
+		std::fill(frameBuffer.begin(), frameBuffer.end(), color);
+		getFrameComposer().draw(position, m_bitmapDimension, frameBuffer.data());
+		m_currentFrameBufferIndex = !m_currentFrameBufferIndex;
+	}
+
 private:
 	inline static constexpr const u8 offset = 32;
-	inline static constexpr const std::array<u16, 2> color = { 0x0000, 0xFFFF };
+	std::array<u16, 2> color = { 0x0000, 0xFFFF };
+
+	u16 compressRGB_impl(RGB color) {
+		if (color.isNormalized()) color.denormalize();
+		u16 r5 = (static_cast<u16>(color.r()) >> 3) & 0x1F;
+		u16 g6 = (static_cast<u16>(color.g()) >> 2) & 0x3F;
+		u16 b5 = (static_cast<u16>(color.b()) >> 3) & 0x1F;
+		return (r5 << 11) | (g6 << 5) | b5;
+	}
 
 private:
 	struct Data_impl {
@@ -102,4 +126,4 @@ private:
 		}
 	}
 };
-}
+} // namespace tx::esp

@@ -3,6 +3,7 @@
 idf_component_register(
 	SRCS
 		"include/tx/addons.h"
+		"include/tx/rgb.hpp"
 		"include/impl/handle_system.hpp"
 	INCLUDE_DIRS
 		"include"

@@ -13,6 +13,7 @@ idf_component_register(
 		"include"
 	REQUIRES
 		"TXLib"
+		"TXLib_Addons"
 		"driver"
 		"esp_driver_gpio"
 		"esp_lcd"

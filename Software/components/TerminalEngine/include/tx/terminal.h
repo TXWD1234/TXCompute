@@ -82,8 +82,6 @@ public:
 		    m_data.begin() + meta.offset + meta.size);
 	}
 
-	u32 getSize(u32 index) const { return m_meta[index].size; }
-
 
 	// delete the oldest string object
 	// this function will still invoke the delete callback
@@ -94,7 +92,14 @@ public:
 		return m_metastate.backBegin;
 	}
 
-
+	void clear() {
+		foreach_impl([&](u32 index) {
+			deleteObject_impl(index);
+		});
+		m_meta.clear();
+		m_metastate.frontEnd = 0;
+		m_metastate.backBegin = 0;
+	}
 
 
 private:
@@ -105,7 +110,9 @@ private:
 	};
 
 public:
-	// Callback
+	// ==========================================
+	// **************** Callback ****************
+	// ==========================================
 
 	// this callback will be called before every string object that is deleted
 	// due to eviction
@@ -128,6 +135,10 @@ public:
 	}
 
 private:
+	// ============================================
+	// **************** Core Logic ****************
+	// ============================================
+
 	esp::Buffer_GrowArray<char> m_data;
 	esp::Buffer_GrowArray<Range_impl> m_meta;
 	/**
@@ -135,7 +146,6 @@ private:
 	 * The order of meta objects in m_meta must reflect the actual data order
 	 * of them in m_data.
 	 */
-
 
 	// meta buffer house keeping
 	/**
@@ -229,7 +239,9 @@ private:
 			m_deleteCb(index);
 	}
 
-	// eviction
+	// ------------------------------------------
+	// ++++++++++++++++ Eviction ++++++++++++++++
+	// ------------------------------------------
 	/**
 	 * There are 2 types of overflows, which both cause a eviction:
 	 * (only matters in implementation)
@@ -241,11 +253,8 @@ private:
 	 * resolves itself.
 	 */
 
-
-
 	// eviction resolution
 	// - deicde whether invoke a eviction or not
-
 
 	// @param size requested size of the incoming data
 	// @param index the result index of the new data's meta object; if is
@@ -468,6 +477,26 @@ private:
 		}
 		m_meta.push_back({});
 		return m_meta.size() - 1;
+	}
+
+private:
+	// =========================================
+	// **************** Helpers ****************
+	// =========================================
+
+	u32 size_impl() {
+		return m_meta.size() - m_metastate.backBegin +
+		       m_metastate.frontEnd - 0;
+	}
+
+	template <std::invocable<u32> Func>
+	void foreach_impl(Func&& f) {
+		for (u32 i = m_metastate.backBegin; i < m_meta.size(); i++) {
+			f(i);
+		}
+		for (u32 i = 0; i < m_metastate.frontEnd; i++) {
+			f(i);
+		}
 	}
 };
 
@@ -732,6 +761,15 @@ public:
 	// note: use `const char*` to indicate that this have to be a C string with
 	// '\0' indicator at the end
 
+	void clear() {
+		if (m_isInputSession) return;
+
+		m_stringPool.clear();
+		m_lineBuffer.clear();
+
+		lhCache_clear();
+		renderImpl_clear();
+	}
 
 
 	// user data setter
@@ -1149,6 +1187,14 @@ private:
 		lhCache_push_front(findLineHeight_impl(line));
 	}
 
+	void lhCache_clear() {
+		m_lhCache.clear();
+		m_lhCacheState.topLine = 0;
+		m_lhCacheState.topLineBegin = 0;
+		m_lhCacheState.bottomLineEnd = 0;
+		m_lhCacheState.screenLineCount = 0;
+	}
+
 
 	// core rendering
 
@@ -1489,9 +1535,13 @@ private:
 
 	// ################ Drawing ################
 
-	// encapulates the converstion between grid coord and pixel coord
+	// converstion between grid coord and pixel coord
+	Coord renderImpl_calcPixelPos(Coord pos) {
+		return pos * m_gridUnitDimension;
+	}
+
 	void renderImpl_drawChar(Coord pos, char c) {
-		m_rr.draw(pos * m_gridUnitDimension, c);
+		m_rr.draw(renderImpl_calcPixelPos(pos), c);
 	}
 
 	// redraw based on current cursorPos and inputLine buffer state
@@ -1509,7 +1559,7 @@ private:
 			renderImpl_drawStr(m_userInputHeaderStr, pos);
 			pos.x = m_userInputHeaderStr.size();
 		}
-		renderImpl_drawLinePartial(lineIndex, yPos);
+		renderImpl_drawLinePartial(lineIndex, pos);
 	}
 	// @param lineBegin the screen line index of the targeting line, that is
 	// the begin line to render in the targeting line (start at)
@@ -1555,7 +1605,7 @@ private:
 		if (m_lhCache.size() == 1) {
 			renderImpl_drawLinePartial(
 			    m_lhCacheState.topLine,
-			    0,
+			    Coord{ 0, 0 },
 			    m_lhCacheState.topLineBegin,
 			    m_lhCacheState.bottomLineEnd);
 			return;
@@ -1581,6 +1631,16 @@ private:
 		    logicalLineIndex,
 		    screenLineIndex,
 		    m_lhCacheState.bottomLineEnd);
+	}
+
+	void renderImpl_clear() {
+		for (int y = 0; y < m_gridSpanDimension.y; y++) {
+			for (int x = 0; x < m_gridSpanDimension.x; x++) {
+				m_rr.drawPlain(
+				    renderImpl_calcPixelPos(Coord{ x, y }),
+				    u16{ 0x0000 });
+			}
+		}
 	}
 
 public:
@@ -1616,6 +1676,7 @@ private:
 	bool m_isInputSession = false;
 
 	void session_endInputSession() {
+		m_inputBuffer.clear();
 		handleNewLine_impl();
 		renderEvent_enter();
 	}

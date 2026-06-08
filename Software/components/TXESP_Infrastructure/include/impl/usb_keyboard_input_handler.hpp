@@ -316,7 +316,9 @@ private:
 		}
 	}
 
-	// Actual handler logic
+	// ===============================================
+	// **************** Handler Logic ****************
+	// ===============================================
 
 	inline static constexpr const u8 RepeatBeginCounterMax = 64; // DevNote: Maybe make these configurable?
 	inline static constexpr const u8 RepeatCounterMax = 4;
@@ -346,7 +348,7 @@ private:
 
 	inline static constexpr const u32 KeyReportKeySize = 6;
 
-	// the entry function of key handling
+	// ################ the entry function of key handling ################
 	static void handleReport_impl(u8* reportData, size_t size) {
 		size -= 2;
 		const u8* data = reportData + 2; // current pressed key data
@@ -451,7 +453,9 @@ private:
 		cb(key, action, modifier);
 	}
 
-	// key cache operations
+	// ------------------------------------------------------
+	// ++++++++++++++++ Key Cache Operations ++++++++++++++++
+	// ------------------------------------------------------
 
 	static u32 keyDataFind_impl(const u8* data, Key key) {
 		for (u32 i = 0; i < 6; i++) {

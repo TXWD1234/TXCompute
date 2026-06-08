@@ -18,10 +18,11 @@
 namespace tx::terminal {
 
 /**
- * Architecture Design Pattern:
- * Logics are separated into different classes, each are friend with whoever
- * going to use it. It will contain a pointer to the object class that it
- * belongs to, as it's parent, and modify data there.
+ * Architectural Design Pattern:
+ * Logics are separated into different classes, each with their own logic to
+ * consider, "Do one thing and do it well".
+ * Then the overall class TemrinalEngine will combine all of the sub logic
+ * classes into the uniform terminal APIs.
  *
  * The terminal engine is designed under the KISS rule:
  * Keep it Simple, Stupid
@@ -730,7 +731,7 @@ public:
 			}
 		}
 		for (const InputEvent& i : m_inputLocalBuffer) {
-			handleInputEvent_impl(i);
+			if (!handleInputEvent_impl(i)) break;
 		}
 		m_inputLocalBuffer.clear();
 		return true;
@@ -989,12 +990,12 @@ private:
 		bool isStringPoolEvicting = false;
 	} m_state;
 
-	void handleInputEvent_impl(const InputEvent& event) {
-		if (event.key == Key::Invalid) return;
-
-		if (event.action == Action::Release) {
-			return;
-		};
+	// @return if the handling should keep going or not
+	// if return false then break
+	bool handleInputEvent_impl(const InputEvent& event) {
+		if (event.key == Key::Invalid ||
+		    event.action == Action::Release)
+			return true;
 
 		if (isPrintableKey(event.key) && bit::contains_none(event.mod, Mod::Control)) {
 			char c = static_cast<char>(enumval(event.key));
@@ -1005,13 +1006,13 @@ private:
 
 			m_inputLine.input(c);
 			renderEvent_input();
-			return;
+			return true;
 		}
 		// functional keys
 		switch (event.key) {
 		case Key::Enter:
 			endInputSession();
-			break;
+			return false;
 		case Key::Backspace:
 			if (m_inputLine.deleteFront())
 				renderEvent_backspace();
@@ -1031,6 +1032,7 @@ private:
 		default:
 			break;
 		}
+		return true;
 	}
 
 	void handleNewLine_impl() {

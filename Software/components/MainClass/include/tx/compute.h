@@ -50,6 +50,8 @@ private:
 		};
 	};
 
+	inline static constexpr const gpio_num_t PowerPin = GPIO_NUM_13;
+
 private:
 	terminal::TerminalEngine m_terminal;
 	struct Buffers_impl {
@@ -67,11 +69,18 @@ private:
 	} m_state;
 
 	void startup_impl() {
-		init_impl();
+		initFirmware_impl();
+		initProgram_impl();
 	}
 
-	void init_impl() {
+	// must be called immediately at startup
+	void initFirmware_impl() {
 		// DevNote: turn on power
+		esp::PowerManager::init(PowerPin);
+		esp::PowerManager::power_on();
+	}
+
+	void initProgram_impl() {
 
 
 		tx::csl::Evaluator::setRegisterFileMemory(m_buffers.registerFile.span());

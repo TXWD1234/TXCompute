@@ -4,3 +4,4 @@
 #include "impl/text_renderer.hpp"
 #include "impl/usb_keyboard_input_handler.hpp"
 #include "impl/buffer.hpp"
+#include "impl/power_manager.hpp"

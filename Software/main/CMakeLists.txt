@@ -4,7 +4,5 @@ idf_component_register(
 	INCLUDE_DIRS
 		"."
 	REQUIRES
-		"TXLib"
-		"TXESP_Infrastructure"
-		"TerminalEngine"
+		"MainClass"
 )

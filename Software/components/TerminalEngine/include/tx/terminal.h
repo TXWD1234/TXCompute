@@ -713,6 +713,9 @@ public:
 	          std::bit_ceil(static_cast<u32>(textGridDimension.y))) {
 		init_impl();
 	}
+	~TerminalEngine() {
+		uninit_impl();
+	}
 
 	// invoke async update
 	// return boolean: success
@@ -761,6 +764,15 @@ public:
 	}
 	// note: use `const char*` to indicate that this have to be a C string with
 	// '\0' indicator at the end
+
+	std::span<char> print(u32 size) {
+		if (m_isInputSession) return std::span<char>{};
+		u32 id = m_stringPool.add(size);
+
+		lineBufferPush_impl(Line_impl{ id });
+		renderEvent_output();
+		return m_stringPool.getSpan(id);
+	}
 
 	void clear() {
 		if (m_isInputSession) return;
@@ -983,6 +995,10 @@ private:
 		m_stringPool.setDeleteCallback([&](u32 id) {
 			this->handleDeleteEvent_impl(id);
 		});
+	}
+	void uninit_impl() {
+		endInputSession();
+		InputHandler::uninit();
 	}
 
 	struct State_impl {
@@ -1713,9 +1729,3 @@ private:
 	}
 };
 } // namespace tx::terminal
-
-/**
- * Things to add:
- * - output session (when user is inputing, all output is ignored; when program
- *   is outputing, all user input is ignored (`InputHandler::stale()`))
- */

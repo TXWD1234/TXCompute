@@ -21,3 +21,5 @@ cmake_minimum_required(VERSION 4.2)
 set(ENV{IDF_PATH} /home/TX_Jerry/.espressif/v6.0/esp-idf)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(Software)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

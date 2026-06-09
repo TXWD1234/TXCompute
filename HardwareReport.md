@@ -2645,6 +2645,226 @@ Hopefully I can build the project before the deadline.
 Good luck!
 *Why am I literally saying good luck to myself.*
 
+# 2026-06-07
+
+## 2026-06-07 20:58:27:<br>Category: Documentation<br>Topic: TerminalEngine Documentation
+The Terminal Engine is a text render and input processor, that performs resemble a terminal.
+It is designed targeting specificly for memory constrained environment, such as the embedded system environment in ESP32, following the KISS rule (Keep It Simple, Stupid).
+
+---
+Logics are separated into different classes, each with their own logic to consider: *"Do one thing and do it well"*.
+Then the overall class `TemrinalEngine` combines all of the sub-logic classes into a set of uniform terminal APIs.
+
+With that architecture in mind, there are 3 sub classes:
+- `StringPool`
+- `InputLine`
+- `InputHandler`
+And an overall class: `TerminalEngine`, which consist of 3 logical parts:
+- Line Storage
+- Input Pipeline
+- Render Pipeline
+
+### `StringPool`
+The `StringPool` is a specialized implementation of an ring buffer.
+There are 2 more features that it achieved beyond the classic ring buffer:
+- Data entry grouping
+- Automatic eviction
+
+#### Data Layout
+`m_data`: the buffer that stores the actual data
+`m_meta`: the buffer that stores the meta data of each logical data group (object): where it start and how big is it.
+
+#### Terminology:
+> - Evict:
+>   The operation of deleting old data to make space for incoming new data when buffer is full. The deleted data is always the oldest data, and one evition might delete multiple data entry depending on the condition
+> - Object / Meta / Range:
+>   These terms refers to an entry in `m_meta`, which is corresponding to a range of data in `m_data`. Conceptually simillar to a partition. In the case of the StringPool, it is a string.
+
+#### Data Entry Grouping
+Each object consist of one or more entry in `m_data`, and they are grouped together by logic. They are added to the buffer at the same time, and deleted together when eviction happens.
+Because the size of each object is variadic, some object might be much bigger then others, or they might all have size of 1.
+
+#### Automatic Eviction
+The total memory usage of `StringPool` is fixed at construction. There are no runtime allocation after initialization.
+Therefore, the size of `m_meta` and `m_data` are both fixed. Because the data entry grouping mechanism, especially because the variadic size, both `m_meta` and `m_data` have a potential of becomeing full.
+Hence, there are 2 condition to invoke an eviction: `m_meta` is full or `m_data` is full.
+In the case of MetaEviction (`m_meta` is full), the oldest and only the oldest object need to be deleted.
+In the case of MemoryEviction (`m_data` is full), a range of objects need to be deleted, since the incoming object might have a size that is bigger then the oldest object.
+Both evictions have a potential of leaving interspace (memory gap) between the oldest object and the second oldest object, since the incoming object's size might be smaller then size of the evicted object(s).
+
+### `InputLine`
+`InputLine` is a classic "gap buffer" inputer design, that provide APIs for the `TerminalEngine` to perform standard input actions (such as moving cursor, input characters, and deleting characters). It also provide a set of APIs for the `TerminalEngine` to query it's internal state and get the final inputed string when user finishes inputing.
+
+#### Logic
+There are 2 buffers in `InputLine`, each one has the capacity of the maximum length of one line in the terminal (which is set by `TerminalEngine`).
+They are the left and right buffers. Intuitively, they stores characters to the left / right of the cursor.
+Whenever a character is inputed, the char value is pushed to the back of the left buffer.
+Whenever the cursor move left, the back element of left buffer (`left.back()`) is pushed to the back of right buffer. And vice versa for moving right.
+The layout can be displayed like this:
+```
+Normal buffer:
+[<<buf<<]
+^       ^
+front   back
+
+InputLine's Gap Buffer:
+[<<left<<]     |       [>>right>>]
+^        ^     ^       ^         ^
+front    back  cursor  back      front
+```
+
+### `InputHandler`
+`inputHandler` is a wrapper of `tx::esp::USBKeyboardInputHandler` from TXESP_Infrastructure.
+It convert the event callback style input into flattened buffer input, which can be easily parsed by `TerminalEngine`.
+
+#### Reason
+`tx::esp::USBKeyboardInputHandler` has a callback based input system, and that's not ideal for complex logic, because the callback is happened in a system level loop, which staling might cause problem.
+Therefore, `InputHandler` is created. It provide `tx::esp::USBKeyboardInputHandler` a callback, which will push input event entries to a buffer provided by the `TerminalEngine`. It flattens the input stream, thereby the Terminal Engine can perform complex logic in async while not staling the system driver.
+
+#### Logic
+The buffer that holds the flattened input event data is the most complicated part of this sub-system.
+Essentially, it is a ring buffer, that wraps around to the front when reached the back.
+`TerminalEngine` and `InputHandler` share a same object of `tx::CircularQueue`. `InputHandler` push new element to the buffer when a new event happens; `TerminalEngine` read and delete the entries it read every update, creating a perfect producer-consumer cycle.
+As long as `TemrinalEngine` don't stale while InputHandler is not `stale()`ed, the ring buffer will not collide.
+
+### Line Storage
+*Also know as LineBuffer.*
+
+Stores the information of each line. Separated by `'\n'`.
+It is a CircularQueue of type `Line_impl`.
+
+#### Line_impl
+A line could be either an entry in the `StringPool` or a string that's outside of the `TerminalEngine` (not owned by `TerminalEngine`).
+There is only one u32 value in this struct. It could either be a `u32` id in the `StringPool`, or a `const char*` pointer since on 32 bit architecture a pointer is 4 bytes.
+The last bit is used as the boolean flag to identify whether it's an id *(1)* or a pointer *(0)*.
+*All of these just to save memory.*
+
+#### `lineBufferEvict_impl()`
+The line buffer is obviously fixed sized and will obviously fill up. If line buffer is filled up, but non of `StringPool`'s buffer is filled up, the eviction of line buffer will trigger. *Which is also know as LineBufferEviction. (following the naming convension of `StringPool`)*
+It will first pop the last element of the line buffer, then try to communicate to `StringPool`, and delete the stored string that is corresponding to this deleting line entry, **if** this line entry is a id type.
+*So in conclusion, this entire line buffer structure is a 3 way eviction system.*
+
+#### `handleDeleteEvent_impl()`
+This function is the callback function of `StringPool`. It handles the job of syncing the state of `StringPool` with lineBuffer.
+Whenever a string (aka an object in StringPool terminology) is deleted, the corresponding line must be deleted as well.
+Therefore, `lineBufferEvict_impl()` is called. And since meanwhile a line could also be an external string that don't belong to `StringPool`, a string pool eviction might invoke the deletion of multiple lines, since deletion must happen in chronological order, also since the line from `StringPool` must be delete, every line before the first `StringPool` line must be deleted as well.
+
+#### The double lock between Line Buffer Eviction and StringPool Eviction
+Because LineBuffer and StringPool are both ring buffer design, they all have possibility to trigger an eviction.
+And the eviction need to sync with each other to prevent currupted data.
+Since `handleDeleteEvent_impl()` calls `lineBufferEvict_impl()`, and `lineBufferEvict_impl()` also indirectly calls `handleDeleteEvent_impl()` by deleteing object from `StringPool`, a cycle is created. If not interrupted, an infinite recursive loop will stale everything.
+Therefore in `TerminalEngine` there is a `m_state`, who contains 2 boolean flags, which are used for the 2 eviction to declare their state.
+If one eviction is happening, and it calles the other eviction, the other eviction will not trigger the eviction back again: the infinite recursion loop is prevented by an if check.
+
+### Input Pipeline
+
+#### `TerminalEngine::poll()`
+This is a public API called by the user - in the program sense - the higher layer of the TerminalEngine, which is the TXCompute main class.
+`poll()` is the main entry of the async processing pipeline. When this function is called, the caller should expect the possibility of the input callback be called, and old references to the user input string to be invalidated (as they are stored in the `StringPool` of the TerminalEngine, which might delete some string entries to make free space for new spaces).
+If `poll()` is not called for a long period of time, an exception might happen in the InputHandler, because the input buffer of the Terminal Engine is filled up. To prevent this, a pair of `stale()` / `unstale()` API is provided in `InputHandler` to ignore the input from source. ***You only need to manually call them if stale is planed to happen during input session.***
+`poll()` copies the current input entries, and pop them from the buffer.
+After that, the lock is released, and the processing of input begins.
+`handleInputEvent_impl()` is called for every input event. Each input event is one key pressing, repeative pressing down, or releasing.
+
+#### `TerminalEngine::handleInputEvent_impl()`
+Process one key input event. It could be either pressing, repeative pressing down, or releasing.
+If releasing, the event will be ignored.
+Otherwise, if the key is printable, it will go through modifier modifications beforehand (such as CapsLock and Shift), and then be pushed into `InputLine` as a `char`.
+If the key is non-printable, aka a function key, it will be processed in a `swtich`, determinding what action it is doing.
+In this stage, all operations are methods of `InputLine`, except `Enter`, which triggers `handleNewLine_impl()`.
+
+#### `TerminalEngine::handleNewLine_impl`
+First it extracts the input string from `InputLine` and store it in the StringPool.
+Then line buffer will be updated, potentialy triggering eviction: `lineBufferEvict_impl()`.
+Finally, the input callback will be called with the input string stored in StringPool.
+
+#### Sessions
+There are 2 sessions in the terminal engine:
+**Input Session:**
+Start when `startInputSession()` is called.
+End when terminal user presses enter or `endInputSession()` is called.
+During input session, all `print()` will be ignored (including `printStatic()`), and inputHandler will be `unstale()`ed.
+
+Default session. Start when TerminalEngine object is initiated, or input session had ended.
+End when input session had started or TerminalEngine object is destroied.
+During output session, all terminal user input will be ignored, and `print()` will be allowed.
+
+### Render Pipeline
+The render pipeline of the TerminalEngine consists of 4 parts:
+- lhCache (line height cache) book keeping
+- render state and cursor logic
+- render events
+- drawing characters and lines
+
+#### Terminology:
+| Word | Explaination |
+|-|-|
+Logical Line / Line_impl | the entry in lineBuffer, that represents one line without wrapping
+Screen Line / Render Line | the actual displaying line of text on the screen, consider wrapping
+
+#### lhCache
+Front is top (of the screen); Back is bottom (of the screen)
+Stores the height (screen line count) of every logical line that are visible on the screen.
+It's index is linearly parallel to lineBuffer, meaning that the second entry in lhCache is corresponding to:
+```cpp
+m_lineBuffer[m_lhCacheState.topLine + 1]
+```
+lhCache represent the current display state, which serve for the scrolling logic.
+
+##### `m_lhCacheState`
+```cpp
+struct LhCacheState_impl {
+	/**
+	 * topLine is index of the first Line_impl that is visible on
+	 * the screen. It is also the index of Line_impl that the front() of
+	 * lhCache is according to.
+	 * topLineBegin is the index of the screen line that is the
+	 * actual first line on the screen. it is the index within the range
+	 * of the topLine object
+	 */
+	u32 topLine, topLineBegin, bottomLineEnd;
+	/**
+	 * the total amount of screen lines of all the logical lines that are
+	 * currently visible on screen, including the invisible screen lines of
+	 * the top and bottom logical line
+	 */
+	u32 screenLineCount;
+} m_lhCacheState;
+```
+
+It is necessary to update screenLineCount whenever a push or pop to the lhCache happened.
+
+#### RenderState
+```cpp
+struct RenderState_impl {
+	/**
+	 * cursorPos always points to the end of left buffer (exclusively), and
+	 * points to the begin of right buffer (inclusively).
+	 * Speaking in plain english: cursorPos is the first character of right
+	 * buffer, which is also the character behind the last character of
+	 * left buffer
+	 */
+	Coord cursorPos;
+} m_renderState;
+```
+*Yeah an entire struct just to store one Coord. It's all for good practice trust.*
+
+Cursor will wrap to the begining if moved horizontally to the end.
+
+#### Render events
+Event functions that have their name directly matching with the keyboard action event. *encapsulating inside encapsulation.*
+The `handleInputEvent_impl` will call these event functions, which will perform their logic and update the graphics.
+
+#### Drawing
+Consist of simple grid -> pixel converter, line drawer and full redraw function
+
+# 2026-06-08
+
+## 2026-06-08 23:36:26:<br>Category: Personal Journal<br>Topic: Intellisense crashout
+Yeah... now for the entire fallout project, my CMake and Intellisense are just not working. Even I already utilized `compile_command.json` it's still not doing it's job. It's appearing that all the inclusion for external libraries, in this case my TXLib, are not recognized by Intellisense.
+I've tried everything I could, no positive result or even any progress was made.
+Then I guess I need to work without intellisense and with red squiggles over everything now.
+Maybe I should be graceful for this thing not breaking when I was in the actual intense development?
 
 
 

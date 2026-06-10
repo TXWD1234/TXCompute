@@ -6,6 +6,8 @@
 namespace tx::esp {
 
 class FrameComposer {
+	using Driver = ILI9488DriverPanel;
+
 public:
 	FrameComposer() {
 		init_impl();
@@ -100,4 +102,4 @@ inline FrameComposer& getFrameComposer() {
 	static FrameComposer fc;
 	return fc;
 }
-}
+} // namespace tx::esp

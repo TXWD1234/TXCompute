@@ -150,5 +150,4 @@ private:
 		inited = 1;
 	}
 };
-using Driver = ILI9488DriverPanel;
 }

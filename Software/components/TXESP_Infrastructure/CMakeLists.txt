@@ -10,6 +10,7 @@ idf_component_register(
 		"include/impl/usb_keyboard_input_handler.hpp"
 		"include/impl/buffer.hpp"
 		"include/impl/power_manager.hpp"
+		"include/impl/basic_esp_utils.hpp"
 	INCLUDE_DIRS
 		"include"
 	REQUIRES

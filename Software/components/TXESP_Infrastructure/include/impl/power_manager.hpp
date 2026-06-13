@@ -1,6 +1,8 @@
 // Copyright (c) 2026 TXCompute. Licensed under the MIT License.
 
 #pragma once
+#include "impl/basic_esp_utils.hpp"
+
 #include "driver/gpio.h"
 #include "esp_timer.h"
 
@@ -30,32 +32,53 @@ public:
 		};
 		gpio_config(&conf_signal);
 
-		// init power thread
-		// xTaskCreate(
-
-		// )
-
-		power_off();
+		//power_off();
 	}
 
 	static void power_on() {
 		gpio_set_level(m_powerPin, 1);
+		enableHardShutdown_impl();
 	}
 	static void power_off() {
 		gpio_set_level(m_powerPin, 0);
 	}
 
+
 private:
 	inline static gpio_num_t m_powerPin = GPIO_NUM_MAX;
 	inline static gpio_num_t m_signalPin = GPIO_NUM_MAX;
 
-	static void powerThread_impl() {
+	inline static bool m_isBootPressing = true;
+	inline static u32 m_shutdownCounter = 0;
+	inline static constexpr const u32 m_shutdownCounterMax = 40; // 2 sec
+
+	inline static TaskHandle_t powerThreadTaskHandle{};
+
+	static void powerThread_impl(void*) {
 		while (true) {
-			bool pressed = gpio_get_level(m_signalPin);
-			if ()
+			delay_impl(50);
+			bool pressing = gpio_get_level(m_signalPin);
+
+			m_isBootPressing = m_isBootPressing && pressing;
+			if (m_isBootPressing) continue;
+
+			if (!pressing) {
+				m_shutdownCounter = 0;
+				continue;
+			}
+			m_shutdownCounter += pressing;
+			if (m_shutdownCounter >= m_shutdownCounterMax)
+				power_off();
 		}
 	}
 
-
+	static void enableHardShutdown_impl() {
+		// init power thread
+		xTaskCreate(
+		    powerThread_impl,
+		    "Power_Thread",
+		    4096, nullptr,
+		    5, &powerThreadTaskHandle);
+	}
 }; // namespace tx::esp
 } // namespace tx::esp

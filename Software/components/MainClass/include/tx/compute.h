@@ -33,7 +33,7 @@ public:
 
 	// must be called immediately at startup
 	static void init() {
-		esp::PowerManager::init(PowerPin);
+		esp::PowerManager::init(PowerPin, SignalPin);
 		esp::PowerManager::power_on();
 	}
 	// must be called no earlier then the very end of the main function
@@ -67,6 +67,7 @@ private:
 	};
 
 	inline static constexpr const gpio_num_t PowerPin = GPIO_NUM_13;
+	inline static constexpr const gpio_num_t SignalPin = GPIO_NUM_14;
 
 private:
 	terminal::TerminalEngine m_terminal;
@@ -120,8 +121,8 @@ private:
 			break;
 		case stringHash_impl("csl"):
 			m_state.userInputStr = m_state.userInputStr.substr(4);
-			// did not add break on purpose because it will then be processed
-			// by `handleCSLExpression()`
+			handleCSLExpression();
+			break;
 		default:
 			handleCSLExpression();
 		};

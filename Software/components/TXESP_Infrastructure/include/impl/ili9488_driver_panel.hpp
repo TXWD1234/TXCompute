@@ -1,14 +1,16 @@
 // Copyright (c) 2026 TXCompute. Licensed under the MIT License.
 
 #pragma once
+#include "impl/basic_esp_utils.hpp"
+
+#include "tx/math.h"
+
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_vendor.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
-#include "tx/math.h"
 
 namespace tx::esp {
 
@@ -21,11 +23,6 @@ public:
 
 
 private:
-	// @param duration ms
-	static void delay_impl(u32 duration) {
-		vTaskDelay(pdMS_TO_TICKS(duration));
-	}
-
 	// clang-format off
 
 	// command system

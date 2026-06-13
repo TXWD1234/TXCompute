@@ -115,8 +115,13 @@ private:
 
 		switch (stringHash_impl(cmdStr)) {
 		case stringHash_impl("exit"):
+		case stringHash_impl("shutdown"):
 			handleCommand_exit();
 			break;
+		case stringHash_impl("csl"):
+			m_state.userInputStr = m_state.userInputStr.substr(4);
+			// did not add break on purpose because it will then be processed
+			// by `handleCSLExpression()`
 		default:
 			handleCSLExpression();
 		};

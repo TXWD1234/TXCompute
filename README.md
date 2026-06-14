@@ -13,21 +13,59 @@ The input of user will be processed by a command line parser, which can handle s
 If user input is TXCSL code, it will be forward to the TXCSL engine, which executes the input code, and outputs the execution result.
 
 ## How to use it
-To boot the device:
+**To provide power:**
+- Plug in an USB-C cable connecting with power into the USB-C socket
+- 
+**To connect with keyboard:**
+- Plug in an USB-A cable connecting with the keyboard (for wired keyboard) / wireless receiver (for wireless keyboard) into the USB-A socket
 
-To shutdown the device:
+**To boot the device:**
+- Press the power button on the device until the device is booted.
 
+**To shutdown the device:**
+- Enter "exit" or "shutdown" in the terminal
+  Example:
+  ```
+  exit
+  shutdown
+  ```
+- or Press the power button until the device is shutdowned
 
-
-
-
-To perform a TXCSL calculation:
-
-
-
+**To perform a TXCSL calculation:**
+- Enter the expression in the terminal directly
+  Example:
+  ```
+  1 + 2 * (5 + 2)
+  ```
+- or With prefix "csl"
+  Example:
+  ```
+  csl 1 + 2 * (5 + 2)
+  ```
 
 ## How to build it
+### Preparation
+#### Hardware Parts
+- An ESP32-S3-DevKitC-1 Devboard
+- A LCD Screen that is 480x320px sized, and supports Parallel 8080 (i80) and ILI9488
+- An USB-C receptacle
+- An USB-A receptacle
+- An MOSFET Transistor
+- An NPN Transistor
+- Several Capacitors: 0.1uf, 10uf
+- Several resistors: 10k, 5.1k
+- Wires
 
+#### Hardware Environment
+
+#### Software Environment
+- ESP-IDF
+- CMake
+- Git
+- (Optional) VSCode
+- (Optional) KiCad
+- (Optional) Fusion
+- (Optional) OrcaSlicer
 
 # Project Story (Why it exists)
 

@@ -15,7 +15,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 ## How to use it
 **To provide power:**
 - Plug in an USB-C cable connecting with power into the USB-C socket
-- 
+
 **To connect with keyboard:**
 - Plug in an USB-A cable connecting with the keyboard (for wired keyboard) / wireless receiver (for wireless keyboard) into the USB-A socket
 
@@ -23,8 +23,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 - Press the power button on the device until the device is booted.
 
 **To shutdown the device:**
-- Enter "exit" or "shutdown" in the terminal
-  Example:
+- Enter `exit` or `shutdown` in the terminal
   ```
   exit
   shutdown
@@ -33,12 +32,10 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 
 **To perform a TXCSL calculation:**
 - Enter the expression in the terminal directly
-  Example:
   ```
   1 + 2 * (5 + 2)
   ```
-- or With prefix "csl"
-  Example:
+- or With prefix `csl`
   ```
   csl 1 + 2 * (5 + 2)
   ```
@@ -50,24 +47,71 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 - A LCD Screen that is 480x320px sized, and supports Parallel 8080 (i80) and ILI9488
 - An USB-C receptacle
 - An USB-A receptacle
-- An MOSFET Transistor
-- An NPN Transistor
-- Several Capacitors: 0.1uf, 10uf
+- A push button
+- A MOSFET Transistor
+- 4 NPN Transistor
+- 2 capacitors: 0.1uf, 10uf
 - Several resistors: 10k, 5.1k
-- Wires
+- Several wires
 
 #### Hardware Environment
+- 3D Printer
+  - Several filament
+- Soldering Iron
+  - Several solder
 
 #### Software Environment
 - ESP-IDF
 - CMake
 - Git
-- (Optional) VSCode
+- (Optional) VSCode (With ESP_IDF plugin)
 - (Optional) KiCad
 - (Optional) Fusion
 - (Optional) OrcaSlicer
 
+### Procedure
+#### Part 1: Shell
+*Working Directory: `/Hardware/CAD`*
+1. Use OrcaSlicer to process a component in the 
+
+#### Part 2: Software
+*Working Directory: `/Software`*
+1. Open the directory with VSCode
+2. Connect the ESP32 Devboard to your computer
+3. Run command `ESP-IDF: Build, Flash and Start a Monitor on Your Device` in VSCode:
+   1. Ctrl+Shift+P open the palette
+   2. Enter the command title `ESP-IDF: Build, Flash and Start a Monitor on Your Device`
+
+#### Part 3: PCB
+*Working Directory: `/Hardware/PCB`*
+
+
+#### Part 4: Assembly
+
+
 # Project Story (Why it exists)
+> *"Lower, lower, lower..."*
+
+## My Programming Obsession
+From the first day I started programming, I found myself constantly pursuing a direction involuntarily.
+And that direction is **low level**.
+Where I first started was already pretty low: C++ is almost everyone think the lowest.
+But I am not satisfied with that.
+Exploring more lower level things such as Windows API and OpenGL, while making my own library and creating data structures, considering architecture, building complex systems and engines... I am on the way toward the lowest level.
+
+## Where did TXCompute came from
+And when I first heard about this hardware hackathon: Fallout, the first thing I thought about is calculator.
+This is the first time I tried hardware development, before I used to think that hardware are all logic gates.
+And I thought using logic gates to make a calculator, implement the adder, subtractor, and multiplier would be really interesting.
+So I set my goal as a calculator, and started reseaarching.
+
+## The design struggle
+After a bit of research, I quickly found out that there are way too many obstacles to achieve my original idea.
+The major problem is that logic gates are... kind of 
+
+## Project in Progress
+
+## Back to low level
 
 
 
@@ -78,6 +122,7 @@ This project consist of 4 main parts:
 - Fireware Infrastructure
 - Terminal Engine
 - TXCSL Languge Processor
+
 And finally the `MainClass` that combines everything together.
 
 *The purpose of this documentation is to provide an overview of the implementation, and an entry point of understanding the logic.*
@@ -148,6 +193,7 @@ ILI9488DriverPanel manage the lowest level communication between the higher leve
 It has stores the commands to the hardware, and specificly focuses on these two jobs:
 - Initialization of the LCD screen;
 - Write data to specific location of the LCD screen's framebuffer.
+
 Call `ILI9488DriverPanel::init()` to initialize; Call `ILI9488DriverPanel::draw()` to write pixels.
 
 #### `FrameComposer`
@@ -231,6 +277,7 @@ It also provide the memory managing wrapper for a few data structure from TXLib 
 - `Buffer_GrowArray`
 - `Buffer_CircularQueue`
 - `Buffer_RingBuffer`
+
 And a plain memory container `Buffer`.
 
 ### PowerManager

@@ -488,7 +488,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "Fallout.kicad_pro",
+    "filename": "PowerButton.kicad_pro",
     "version": 3
   },
   "net_settings": {
@@ -524,7 +524,7 @@
     "last_paths": {
       "idf": "",
       "netlist": "",
-      "plot": "",
+      "plot": "Gerbers/",
       "specctra_dsn": "",
       "vrml": ""
     },
@@ -643,18 +643,18 @@
     "subpart_id_separator": 0,
     "top_level_sheets": [
       {
-        "filename": "Fallout.kicad_sch",
-        "name": "Fallout",
-        "uuid": "3e210c6b-7080-4f80-96c4-6db4be19243d"
+        "filename": "PowerButton.kicad_sch",
+        "name": "Root",
+        "uuid": "f9f87fed-781a-4c95-ad6d-61a5d2fd3fe6"
       }
     ],
-    "used_designators": "",
+    "used_designators": "J1,SW10,R41-46,Q24-28,#PWR1-5,#PWR59-62",
     "variants": []
   },
   "sheets": [
     [
-      "3e210c6b-7080-4f80-96c4-6db4be19243d",
-      "Fallout"
+      "f9f87fed-781a-4c95-ad6d-61a5d2fd3fe6",
+      "Root"
     ]
   ],
   "text_variables": {},

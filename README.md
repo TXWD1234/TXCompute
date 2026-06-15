@@ -100,16 +100,31 @@ But I am not satisfied with that.
 Exploring more lower level things such as Windows API and OpenGL, while making my own library and creating data structures, considering architecture, building complex systems and engines... I am on the way toward the lowest level.
 
 ## Where did TXCompute came from
-And when I first heard about this hardware hackathon: Fallout, the first thing I thought about is calculator.
-This is the first time I tried hardware development, before I used to think that hardware are all logic gates.
+When I first heard about this hardware hackathon: Fallout, and the fact that I need to make a hardware project, the first thing I thought about is **calculator**.
+This is the first time I tried hardware development; before I used to think that hardware are all logic gates.
 And I thought using logic gates to make a calculator, implement the adder, subtractor, and multiplier would be really interesting.
-So I set my goal as a calculator, and started reseaarching.
+Therefore I set my goal as a calculator, and started reseaarching.
 
 ## The design struggle
 After a bit of research, I quickly found out that there are way too many obstacles to achieve my original idea.
-The major problem is that logic gates are... kind of 
+The major problem is that logic gates are... kind of too low.
+After that realization, I was stuck in a design idea struggle.
+I was having a constant design struggle about what I should make. Not being able to use logic gates just made everything feels so simple. MCUs can just perform the calculation, the entire project idea of a calculator just suddenly seems to be too easy and not impressive enough.
+**I was worried about the project being too simple.**
+For almost a week, I did not know what to do.
+I was numbing myself by exploring hardware programming environment and new knowledge, but knowledge without usage is useless. And everytime I think about the project the only thing I felt is dilemma...
+Until I finally found an solution. I do not need to make exactly the project I was planning to make before.
+**If making the basic is too easy, then just expand on the basic.**
+> **"Make it advanced, make it better."**
+
+This is my conclusion. If just make a basic calculator is too easy with MCU, then make a better calculator, that has more feature, more capability, and faster.
+When I realized that, I immediately had an idea:
+Make a computation DSL, and an emulator for it.
+Write a compiler and a virtual machine in the tight memory and performance constrained environment of embedded system is definitely hard enough... I thought.
+So then, I start working.
 
 ## Project in Progress
+
 
 ## Back to low level
 

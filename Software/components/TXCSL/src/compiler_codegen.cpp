@@ -27,6 +27,8 @@ void Compiler::CodeGen_impl::compile_impl() {
 	    m_source,
 	    0,
 	    m_bracketBuffer); // tokenlize outer most expression
+	// parse
+	// DevNote: in progress; add Parser call
 	stackPush_impl(
 	    m_expressionBuffer.size() - 1,
 	    m_tokenBuffer.size() - 1,
@@ -317,7 +319,7 @@ void Compiler::CodeGen_impl::expandExpression_impl(Expression_impl expr, tx::u8 
 	tokenlize_impl(m_bracketBuffer[expr.bracketIndex]);
 
 	// parse
-
+	// DevNote: in progress; add Parser call
 
 	// push stack
 	stackPush_impl(

@@ -64,6 +64,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 - ESP-IDF
 - CMake
 - Git
+- TXLib
 - (Optional) VSCode (With ESP_IDF plugin)
 - (Optional) KiCad
 - (Optional) Fusion
@@ -72,7 +73,9 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 ### Procedure
 #### Part 1: Shell
 *Working Directory: `/Hardware/CAD`*
-1. Use OrcaSlicer to process a component in the 
+1. Use OrcaSlicer to process a component (an individual body) in the `Main.step` file
+2. Send the result to your 3D printer
+3. Wait for print to finish, and repeat for every component
 
 #### Part 2: Software
 *Working Directory: `/Software`*
@@ -84,10 +87,21 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 
 #### Part 3: PCB
 *Working Directory: `/Hardware/PCB`*
-
+1. Contact a manufacturing company to fabricate the PowerButton PCB
+   - Use the Gerber files in directory: `PowerButton/Gerbers`
+   - Suggestion: Do this part in China
 
 #### Part 4: Assembly
-
+*Working Directory: `/Hardware`*
+1. Place the ESP32 Devboard and the PowerButton PCB on their according foundation
+   - Use screws to secure the mounting
+2. Connect the components except the screen, according to the schematic: `PCB/Fallout.kicad_sch`
+   1. Connect each pin of the USB-C receptacle to their respective GPIO pin
+   2. Connect each pin of the USB-A receptacle to their respective GPIO pin
+   3. Connect each pin of the PowerButton receptacle to their respective GPIO pin
+3. Assemble the Hinge
+   1. Put one of the hinge components on one of the 
+// add pictures <--------------------
 
 # Project Story (Why it exists)
 > *"Lower, lower, lower..."*
@@ -99,17 +113,18 @@ Where I first started was already pretty low: C++ is almost everyone think the l
 But I am not satisfied with that.
 Exploring more lower level things such as Windows API and OpenGL, while making my own library and creating data structures, considering architecture, building complex systems and engines... I am on the way toward the lowest level.
 
-## Where did TXCompute came from
+## Where Did TXCompute Came From
 When I first heard about this hardware hackathon: Fallout, and the fact that I need to make a hardware project, the first thing I thought about is **calculator**.
 This is the first time I tried hardware development; before I used to think that hardware are all logic gates.
-And I thought using logic gates to make a calculator, implement the adder, subtractor, and multiplier would be really interesting.
-Therefore I set my goal as a calculator, and started reseaarching.
+And I thought using logic gates to make something would be really cool, and a really interesting challange.
+In this case, a calculator would be a perfect project to do that. Implement the most basic adder, subtractor, and multiplier are exactly the tasks I was imagining.
+Therefore I set my goal, and started reseaarching.
 
-## The design struggle
-After a bit of research, I quickly found out that there are way too many obstacles to achieve my original idea.
-The major problem is that logic gates are... kind of too low.
-After that realization, I was stuck in a design idea struggle.
-I was having a constant design struggle about what I should make. Not being able to use logic gates just made everything feels so simple. MCUs can just perform the calculation, the entire project idea of a calculator just suddenly seems to be too easy and not impressive enough.
+## The Design Struggle
+After a bit of research, I quickly found out that there are way too many obstacles to achieve my original idea, therefore made it impossible.
+The major problem is that logic gates are... kind of way too low, making them very hard to connect with other existing infrastructure.
+After that realization, I was stuck in a design idea struggle. A design struggle about what I should make.
+Not using logic gates just made everything feels so simple. MCUs can just perform the calculation, the entire project idea of a calculator just suddenly seems to be too easy and not impressive enough.
 **I was worried about the project being too simple.**
 For almost a week, I did not know what to do.
 I was numbing myself by exploring hardware programming environment and new knowledge, but knowledge without usage is useless. And everytime I think about the project the only thing I felt is dilemma...
@@ -123,12 +138,17 @@ Make a computation DSL, and an emulator for it.
 Write a compiler and a virtual machine in the tight memory and performance constrained environment of embedded system is definitely hard enough... I thought.
 So then, I start working.
 
-## Project in Progress
-
-
-## Back to low level
-
-
+## Back to Low Level
+After 2 month of hardworking, TXCompute finally came close to the end.
+During development, I found out that the project is actually not as simple as I thought.
+The memory constraint really made software became a struggle. Architecture and structure design need to have awareness of the memory constraint, therefore much more complicated. I made several new data structure during development, and the entire project software design is also heavily optimized for tight memory.
+At the very last, in the process of finishing up the project, I suddenly found out there is a unplanned component in the project: The PowerButton.
+Brief explaination about the component: It is a hardware push button controling the power input of the device, but at the same time need to be able to be turned off by the software.
+And as I developed deeper into this component, I learned the mechanics of transistors, and built logic gates (the NOT gate specificly) with it. Finally I utilized all these knowledge and created a PCB.
+That's when I realized. I am back at what I was imagining at the start of the project: interact and make things with logic gates.
+Additionally, even lower! I made the logic gate itself!
+And that is exactly the pursuit of this project, as well as my programming career:
+> *Lower, lower, and lower....*
 
 # Project Documentation
 
@@ -145,45 +165,51 @@ And finally the `MainClass` that combines everything together.
 
 ## The Hardware Assembly
 
-The TXCompute device, or the TXComputer consists of 5 parts:
-- The CPU / MCU
-- The LCD Screen
-- The keyboard connection
-- The power supply
-- The shell
+The TXCompute device, or the *"TXComputer"* consists of 2 parts:
+- The 3D Printed Shell
+- Circuit
+- Hardware Parts
 
-### Appearence
+### Shell
+*The 3D shell design took inspiration from my personal laptop: `Legion Y7000 IRX10`.*
+The 3D printed shell is the hardware container containing all the wire connection from the circuit, who acts like the interface of the project for users.
+The model design is highly focused on mechanical functionalities. Its implementation consists of:
+- Hinge
+- Circuit Foundation - support the wiring and the PCB to sustain it's position
+- Several Connections
+  - connect the screen to teh shell
+  - connect the screen part to the hinge
+  - connect the MCU part to the hinge
+  - connect the front and back plate to the MCU part
 
-The TXComputer appears like a Apple 2 / IBM old computer, since it's size and meaning matches that era perfectly: *Small screen, DOS-like terminal based interface, Pixel font ...*
-The Screen has a size of `96.52mm(Width) x 57.26mm(Height)`, with a resolution of `480px(Width) x 320px(Height)`.
-It's stabled to the shell in a `100` degree angle, facing the keyboard and the user behind the keyboard.
-The keyboard is a 16 key keyboard, laying flat but with a small angle of `10` degree to the ground, also stabled on to the shell.
-The shell has it's main color being beige. it's round cornered, and have smooth surface. It hides all the cables and PCBs from the user, leaving only the keyboard and screen interface.
+*Highlight worth mentioning: The usage of sunmao in the connection.*
+// add pictures <--------------------
 
-### The CPU/MPU
+#### Hinge Design
+The hinge is designed such that wires connecting the ESP32 and the screen (the display bus) can run through.
+It has 2 hollow cylinders, one containing the other. The smaller one will be containing the wires.
+// add pictures <--------------------
 
-TXComputer uses ESP32-S3-WROOM-1 Devboard as it's MPU.
-It's the conclusion after consideration of:
-- **Prize:** ESP32 is much cheaper then Raspberry Pi; 
-- **Performance:** ESP32 have much more RAM and flash memory then Arduino
-- **Pragrammability:** ESP32 have a complete tool chain: ESP-IDF, which is completely based on CMake and C, which is what I am familiar with
+### Circuit
+There are 2 main parts for the circuit: parts connection and the power button.
 
-### The LCD Screen
+#### Parts Connection
+Connect the components including:
+- LCD Screen
+- PowerButton
+- USB-A / USB-C receptacle
+to the ESP32 devboard.
 
-TXComputer uses a `480px(Width) x 320px(Height)` LCD screen pro
+// add pictures <--------------------
 
-### The Keyboard
+#### PowerButton
+The logic circuit that controls the power and life time of the device.
+The circuit allow a push button to turn on and off the device, while when turned on, device can turn itself off as well.
 
-
-### The Power supply
-
-### The Shell
-
-
-
-
+// add pictures <--------------------
 
 ## Firmware
+*Also known as TXESP_Infrastructure.*
 
 There are 4 branches in the firmware infrastructure, each serve a usage in the main class:
 - TextRenderer
@@ -570,7 +596,7 @@ Every line of code in TXCSL is treated as expression, and will be processed by t
 #### The design pattern of the compilation
 Each stage will have it's own class.
 That class will be a temporary object, which will outputs a certain result of the stage.
-The purpose of the class is to maintain it's own internal state (because they are all state machin design), and the temporary memory they allocate.
+The purpose of the class is to maintain it's own internal state (because they are all state machine design), and the temporary memory they allocate.
 
 #### Compilation pipeline
 The compilation pipeline flow is:
@@ -580,6 +606,8 @@ The compilation pipeline flow is:
 4. Compiler      - transform tokens into instructions, flatten the operation tree
 The process of nested expressions will be lazy, meaning that it will not be processed until necessary. 
 When the Compiler encounters an unexpanded expression, it will call the Tokenlizer again, and tokenlize the unexpanded expression.
+
+*See detailed logic explaination in inlined comments of source files.*
 
 #### APIs
 

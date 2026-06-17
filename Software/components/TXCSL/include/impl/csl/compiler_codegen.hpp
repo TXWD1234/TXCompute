@@ -179,7 +179,7 @@ private:
 	 * 		- majorExpressionregister: the register of that major expression
 	 *			 (major section, the stride of contiuous major operations that was processing by the `compileMajorExpression_impl`
 	 * 3. update stack
-	 * 3. expand the expression
+	 * 4. expand the expression
 	 * 
 	 * Note: there will not be explicit state saying that it's a resumed expression.
 	 * When the `compileMajorExpression_impl` function sees a Register Token, it will just merge it with the current register and then free the token one

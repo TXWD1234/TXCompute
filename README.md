@@ -100,6 +100,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
    2. Connect each pin of the USB-A receptacle to their respective GPIO pin
    3. Connect each pin of the PowerButton receptacle to their respective GPIO pin
 3. Assemble the Hinge
+\![HingePicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge.png)
    1. Slide body Hinge_Left onto body Hinge_Edge_Left, such that the through hole of Hinge_Left is containing the extruding cylinder of Hinge_Edge_Left
    2. Slide body Hinge_Center_Left into the other side of Hinge_Left, such that the through hole of Hinge_Left is also containing the extruding cylinder of Hinge_Center_Left
 ![HingeLogicPicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge-logic.png)
@@ -193,12 +194,12 @@ The model design is highly focused on mechanical functionalities. Its implementa
   - connect the front and back plate to the MCU part
 
 *Highlight worth mentioning: The usage of sunmao in the connection.*
-// add pictures <--------------------
+![Sunmao](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/sunmao.png)
 
 #### Hinge Design
 The hinge is designed such that wires connecting the ESP32 and the screen (the display bus) can run through.
 It has 2 hollow cylinders, one containing the other. The smaller one will be containing the wires.
-// add pictures <--------------------
+![HingeLogicPicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge-logic.png)
 
 ### Circuit
 There are 2 main parts for the circuit: parts connection and the power button.
@@ -210,13 +211,14 @@ Connect the components including:
 - USB-A / USB-C receptacle
 to the ESP32 devboard.
 
-// add pictures <--------------------
+![MainCircuitSchematic](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/main-circuit-schematic.png)
 
 #### PowerButton
 The logic circuit that controls the power and life time of the device.
 The circuit allow a push button to turn on and off the device, while when turned on, device can turn itself off as well.
 
-// add pictures <--------------------
+![PowerButtonSchematic](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/power-button-schematic.png)
+![PowerButtonPCB](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/power-button-pcb.png)
 
 ## Firmware
 *Also known as TXESP_Infrastructure.*

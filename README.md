@@ -100,7 +100,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
    2. Connect each pin of the USB-A receptacle to their respective GPIO pin
    3. Connect each pin of the PowerButton receptacle to their respective GPIO pin
 3. Assemble the Hinge
-\![HingePicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge.png)
+![HingePicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge.png)
    1. Slide body Hinge_Left onto body Hinge_Edge_Left, such that the through hole of Hinge_Left is containing the extruding cylinder of Hinge_Edge_Left
    2. Slide body Hinge_Center_Left into the other side of Hinge_Left, such that the through hole of Hinge_Left is also containing the extruding cylinder of Hinge_Center_Left
 ![HingeLogicPicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge-logic.png)
@@ -113,7 +113,9 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 5. Place the LCD Screen on it's foundation in the Screen/Body
    1. Place the LCD Screen
    2. Place the Cover (Body Cover_Left and Body Cover_Right) on top of the LCD Screen
-6. 
+6. Place the back plate (body MCU/Bottom)
+   - Screw in the screws in the indicated location
+
 # Project Story (Why it exists)
 > *"Lower, lower, lower..."*
 

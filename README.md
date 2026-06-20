@@ -2,7 +2,9 @@
 ***// Copyright (c) 2026 TXCompute. Licensed under the MIT License.***
 
 TXCompute is a device to perform mathematical calculations. It is targeting to be a more powerful calculator, that don't only rely on buttons, but can handle complicated logic.
-*This project is for the hackathon event Fallout (https://fallout.hackclub.com) hosted by Hackclub (https://www.hackclub.com).*
+*This project is for the hackathon event [Fallout](https://fallout.hackclub.com) hosted by [Hackclub](https://www.hackclub.com).*
+
+![ZinePage](https://github.com/TXWD1234/TXCompute/raw/main/ZinePage.pdf)
 
 # Project Usage
 
@@ -53,6 +55,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 - 2 capacitors: 0.1uf, 10uf
 - Several resistors: 10k, 5.1k
 - Several wires
+*See detailed information in [BOM](https://github.com/TXWD1234/TXCompute/raw/main/BOM.csv)*
 
 #### Hardware Environment
 - 3D Printer
@@ -112,7 +115,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
    2. Run wires from the ESP32 through the hinge to the screen
 5. Place the LCD Screen on it's foundation in the Screen/Body
    1. Place the LCD Screen
-   2. Place the Cover (Body Cover_Left and Body Cover_Right) on top of the LCD Screen
+   2. Place the Cover (Body Cover) on top of the LCD Screen
 6. Place the back plate (body MCU/Bottom)
    - Screw in the screws in the indicated location
 
@@ -163,6 +166,13 @@ Additionally, even lower! I made the logic gate itself!
 And that is exactly the pursuit of this project, as well as my programming career:
 > *Lower, lower, and lower....*
 
+# Credit
+Auther: TX_Jerry
+Assistant: [Justin Li](https://www.github.com/justinnova0915)
+Art Inspiration: The Matrix
+Event: [Fallout](https://fallout.hackclub.com), hosted by [Hackclub](https://www.hackclub.com)
+// Project by TXStudio
+
 # Project Documentation
 
 This project consist of 4 main parts:
@@ -201,6 +211,7 @@ The model design is highly focused on mechanical functionalities. Its implementa
 #### Hinge Design
 The hinge is designed such that wires connecting the ESP32 and the screen (the display bus) can run through.
 It has 2 hollow cylinders, one containing the other. The smaller one will be containing the wires.
+The hinge allow a maximum rotation of 126 degree, and is physically stop by the MCU body when reached the limit. (Have to create a physical stop to prevent the hinge from laying flat because the material of 3D printing filament is neither strong enought nor accurate enough to make an actual self lock hinge.)
 ![HingeLogicPicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge-logic.png)
 
 ### Circuit

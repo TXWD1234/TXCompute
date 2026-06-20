@@ -2933,7 +2933,7 @@ https://item.taobao.com/item.htm?from=cart&id=787575307428&mi_id=00002OvEcavU_dv
 **Total Price**
 ```
 RMB:
-36.04 + 47.5 + 0.38 + 0.35 + 0.77 + 1.8 + 3.3 = 90.14
+30.05 + 47.5 + 0.38 + 0.35 + 0.77 + 1.8 + 3.3 = 90.14
 
 = 13.34 USD
 = 18.23 CAD
@@ -2951,14 +2951,11 @@ Plus currently most of the heavy development are over, there is not really a lot
 But anyway, now since power button is finished, the only thing left is to finish up CAD and readme.
 4 days left, let's lockin.
 
-
 # 2026-06-13
 
 ## 2026-06-13 12:49:41:<br>Category: Development Report<br>Topic: The PowerButton
 *I genuinely didn't thought the power button will be this complicated.*
-
-
-
+*It is the end of the project, and this was a not-in-plan component, therefore the report for it is delayed.*
 
 ### Header List
 1. GND
@@ -2969,32 +2966,12 @@ But anyway, now since power button is finished, the only thing left is to finish
 6. BTN_LEFT (connect to one side of the push button)
 7. BTN_RIGHT (connect to one side of the push button)
 
+# Project Completion
+2026-06-20 12:24
+*Right at the last day. right on the deadline.*
+After more then 2 months of hardworking, learned hardware programming and CAD from scratch, built several complex systems, TXCompute is finally completed.
+Indeed, there are several feature that I wish to add to the project, but **deadline is a thing.**
+Therefore, with the completed CAD, circuits design and minimum functionality of TXCSL, I can finally declare the completion of the project TXCompute.
+*By the way, this project is by far the biggest project of mine ever.*
 
 
-
-
-
-Final report: Fallout report
-
-
-
-
-Todo:
-add set pin in FrameComposer
-
-
-
-lights: backlights - brightness and power usage
-
-
-
-Screen:
-**480x320 - 10x5cm**
-https://www.lcsc.com/product-detail/C19632787.html?s_z=n_q_480%2a320%25203.5%2520LCD%252C%2520OLED%252C%2520Graphic&spm=wm.ssy.bg.20.xh&lcsc_vid=RFUPX1FSFlRfAVUCTlhdX1MHT1ZaUwZURVINUVZXQFExVlNRQVRdX1BXQFRZUzsOAxUeFF5JWBYZEEoKFBINSQcJGk4dAgUUFAk%3D
-**480x648 - 12x9cm**
-https://www.lcsc.com/product-detail/C41416471.html?s_z=n_q_LCD%252C%2520OLED%252C%2520Graphic&spm=wm.ssy.bg.43.xh&lcsc_vid=RFUPX1FSFlRfAVUCTlhdX1MHT1ZaUwZURVINUVZXQFExVlNRQVRdXlVRQlBeVzsOAxUeFF5JWBYZEEoKFBINSQcJGk4dAgUUFAk%3D
-
-
-
-
-## 2026-04-12 14:40:50:<br>Category: Personal Journal<br>Topic: The design idea struggle

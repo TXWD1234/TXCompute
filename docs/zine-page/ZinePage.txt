@@ -1,0 +1,14 @@
+Loading...
+[TXCompute@TX_Jerry]> descirption
+TXCompute is a device to perform mathematical calculations. It is targeting to be a more powerful calculator, that can handle complicated logic.
+[TXCompute@TX_Jerry]> features
+- ESP32 MCU
+- ILI9488 & Parallel 8080 480x320 Display
+- Laptop-like Case
+- Terminal Engine
+- TX Computational Scripting Language
+[TXCompute@TX_Jerry]> author
+Agent TX_Jerry (15, Canada)
+[TXCompute@TX_Jerry]> link
+
+https://github.com/TXWD1234/TXCompute

@@ -55,6 +55,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 - 2 capacitors: 0.1uf, 10uf
 - Several resistors: 10k, 5.1k
 - Several wires
+
 *See detailed information in [BOM](https://github.com/TXWD1234/TXCompute/blob/main/BOM.csv)*
 
 #### Hardware Environment
@@ -102,16 +103,14 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
    1. Connect each pin of the USB-C receptacle to their respective GPIO pin
    2. Connect each pin of the USB-A receptacle to their respective GPIO pin
    3. Connect each pin of the PowerButton receptacle to their respective GPIO pin
-3. Assemble the Hinge
-
+3. Assemble the Hinge  
 ![HingePicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge.png)
    1. Slide body Hinge_Left onto body Hinge_Edge_Left, such that the through hole of Hinge_Left is containing the extruding cylinder of Hinge_Edge_Left
-   2. Slide body Hinge_Center_Left into the other side of Hinge_Left, such that the through hole of Hinge_Left is also containing the extruding cylinder of Hinge_Center_Left
-
+   2. Slide body Hinge_Center_Left into the other side of Hinge_Left, such that the through hole of Hinge_Left is also containing the extruding cylinder of Hinge_Center_Left  
 ![HingeLogicPicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge-logic.png)
-   4. Do the same thing with Hinge_Right, Hinge_Edge_Right and Hinge_Center_Right
-   5. Slide each of the assembled hinge component onto body Screen/Body. Make sure the sunmao structure on the Hinge_Edge_* fit
-   6. Insert the tenon part of the sunmao structure (body group: Hinge_Body_Connection) into the mortise in center created by the 4 overlaping rectangle holes
+   3. Do the same thing with Hinge_Right, Hinge_Edge_Right and Hinge_Center_Right
+   4. Slide each of the assembled hinge component onto body Screen/Body. Make sure the sunmao structure on the Hinge_Edge_* fit
+   5. Insert the tenon part of the sunmao structure (body group: Hinge_Body_Connection) into the mortise in center created by the 4 overlaping rectangle holes
 4. Connect the 2 main bodies
    1. Secure the hinge on the MCU/Body with screws in the indicated screw holes
    2. Run wires from the ESP32 through the hinge to the screen

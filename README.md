@@ -4,7 +4,7 @@
 TXCompute is a device to perform mathematical calculations. It is targeting to be a more powerful calculator, that don't only rely on buttons, but can handle complicated logic.
 *This project is for the hackathon event [Fallout](https://fallout.hackclub.com) hosted by [Hackclub](https://www.hackclub.com).*
 
-![ZinePage](https://github.com/TXWD1234/TXCompute/raw/main/ZinePage.pdf)
+![ZinePage](https://github.com/TXWD1234/TXCompute/raw/main/docs/zine-page/ZinePage.png)
 
 # Project Usage
 
@@ -55,7 +55,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
 - 2 capacitors: 0.1uf, 10uf
 - Several resistors: 10k, 5.1k
 - Several wires
-*See detailed information in [BOM](https://github.com/TXWD1234/TXCompute/raw/main/BOM.csv)*
+*See detailed information in [BOM](https://github.com/TXWD1234/TXCompute/blob/main/BOM.csv)*
 
 #### Hardware Environment
 - 3D Printer
@@ -103,6 +103,7 @@ If user input is TXCSL code, it will be forward to the TXCSL engine, which execu
    2. Connect each pin of the USB-A receptacle to their respective GPIO pin
    3. Connect each pin of the PowerButton receptacle to their respective GPIO pin
 3. Assemble the Hinge
+
 ![HingePicture](https://github.com/TXWD1234/TXCompute/raw/main/docs/readme-assets/hinge.png)
    1. Slide body Hinge_Left onto body Hinge_Edge_Left, such that the through hole of Hinge_Left is containing the extruding cylinder of Hinge_Edge_Left
    2. Slide body Hinge_Center_Left into the other side of Hinge_Left, such that the through hole of Hinge_Left is also containing the extruding cylinder of Hinge_Center_Left
@@ -167,11 +168,11 @@ And that is exactly the pursuit of this project, as well as my programming caree
 > *Lower, lower, and lower....*
 
 # Credit
-Auther: TX_Jerry
-Assistant: [Justin Li](https://www.github.com/justinnova0915)
-Art Inspiration: The Matrix
-Event: [Fallout](https://fallout.hackclub.com), hosted by [Hackclub](https://www.hackclub.com)
-// Project by TXStudio
+Auther: [TX_Jerry](https://www.github.com/TXWD1234)  
+Assistant: [Justin Li](https://www.github.com/justinnova0915)  
+Art Inspiration: The Matrix  
+Event: [Fallout](https://fallout.hackclub.com), hosted by [Hackclub](https://www.hackclub.com)  
+// Project by TXStudio  
 
 # Project Documentation
 

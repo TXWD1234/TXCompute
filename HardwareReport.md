@@ -1911,7 +1911,7 @@ Just like explained above, it have 3 pins:
 In a P-Channel MOSFET, when *Gate* is low, *Drain* will be high; when *Gate* is high, *Drain* is low. (Kinda like a `NOT` if seen between *Gate* and *Drain*, or a `XOR` if seen in total)
 In a N-Channel MOSFET, when *Gate* is high, *Drain* will be high; when *Gate* is low, *Drain* is low. (it's the opposite of P-Channel, it kinda like `AND` if seen in total)
 
-The electrical current at *Gate* have to be either same with *Source*, or 0. Any voltage other than that will result in Linear Region (it's not fully on but not fully off either)
+The electrical voltage at *Gate* have to be either same with *Source*, or 0. Any voltage other than that will result in Linear Region (it's not fully on but not fully off either)
 
 ### NPN and PNP
 NPN (Negative-Positive-Negative) and PNP (Positive-Negative-Positive) are 2 major types of Bipolar Junction Transistor (BJT), that are **current-controlled**.
